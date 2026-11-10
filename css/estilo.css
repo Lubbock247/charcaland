@@ -87,3 +87,9 @@ footer { text-align: center; color: var(--suave); padding: 24px 16px; border-top
 .vacio { color: var(--suave); border: 1px dashed var(--borde); border-radius: 10px; padding: 28px; text-align: center; }
 .entrada { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
 @media (max-width: 700px) { .destacada { grid-template-columns: 1fr; } .hero h1 { font-size: 2rem; } }
+
+.usuario { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: .9rem; }
+.usuario a { color: var(--suave); text-decoration: none; padding: 6px 10px; }
+.usuario a:hover { color: var(--texto); }
+.saldo { color: var(--acento); font-weight: 700; }
+.chip { background: var(--panel2); padding: 4px 12px; border-radius: 99px; }

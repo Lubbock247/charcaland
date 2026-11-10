@@ -5,6 +5,7 @@
 
 const CONFIG = {
   nombreServidor: "Charcaland",          // PROVISIONAL
+  api: "https://charcaland-api.lubbock247.workers.dev",  // servidor de cuentas y saldo
   invitacionDiscord: "",  // Enlace de invitación al Discord (si está vacío, el botón no sale)
   // Se rellenan cuando se creen en Discord (ver instrucciones):
   discordClientId: "1569682266156957696",   // ID de la aplicación de Discord (para "Entrar con Discord")

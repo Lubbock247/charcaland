@@ -1,0 +1,13 @@
+{
+  "name": "charcaland-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "charcaland", "database_id": "836ab4a7-7987-4714-bb41-13df12d398cb" }
+  ],
+  "vars": {
+    "DISCORD_CLIENT_ID": "1569682266156957696",
+    "ADMIN_IDS": "688431667743948800,871460768804122684,847907957903851540",
+    "ORIGENES": "https://lubbock247.github.io,http://127.0.0.1:8765"
+  }
+}

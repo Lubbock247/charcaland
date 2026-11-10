@@ -12,13 +12,50 @@ function fechaBonita(f) {
   return new Date(f + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
 }
 
+// ---- Sesión con Discord (compartida por todas las páginas) ----
+// Discord devuelve el token en la dirección tras "Entrar"; se guarda en este navegador.
+(function () {
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get("access_token")) {
+    try { localStorage.setItem("dc_token", h.get("access_token")); } catch {}
+    history.replaceState(null, "", location.pathname);
+  }
+})();
+function irALogin() {
+  if (!CONFIG.discordClientId) return;
+  const p = new URLSearchParams({ client_id: CONFIG.discordClientId, response_type: "token",
+    scope: "identify", redirect_uri: location.origin + location.pathname.replace(/[^/]*$/, "") + "sugerencias.html" });
+  location.href = "https://discord.com/oauth2/authorize?" + p;
+}
+function salir() { try { localStorage.removeItem("dc_token"); } catch {} location.reload(); }
+// Devuelve {id, nombre, saldo, rol} o null si no hay sesión.
+const SESION = (async () => {
+  let t = null;
+  try { t = localStorage.getItem("dc_token"); } catch {}
+  if (!t || !CONFIG.api) return null;
+  try {
+    const r = await fetch(CONFIG.api + "/api/yo", { headers: { Authorization: "Bearer " + t } });
+    if (r.ok) return await r.json();
+    if (r.status === 401) { try { localStorage.removeItem("dc_token"); } catch {} }
+  } catch {}
+  return null;
+})();
+
 // Cabecera y pie compartidos
 (function () {
   const actual = location.pathname.split("/").pop() || "index.html";
   const enlaces = PAGINAS.map(([u, n]) =>
     `<a href="${u}" class="${u === actual ? "activa" : ""}">${n}</a>`).join("");
   document.getElementById("cabecera").innerHTML =
-    `<div class="barra"><a class="logo" href="index.html"><span>▣</span> ${esc(CONFIG.nombreServidor)}</a><nav>${enlaces}</nav></div>`;
+    `<div class="barra"><a class="logo" href="index.html"><span>▣</span> ${esc(CONFIG.nombreServidor)}</a><nav>${enlaces}</nav><div class="usuario" id="usuario"></div></div>`;
+  SESION.then(u => {
+    const el = document.getElementById("usuario");
+    el.innerHTML = u
+      ? `<span class="saldo">${u.saldo} monedas</span><span class="chip">${esc(u.nombre)}${u.rol === "admin" ? " · admin" : ""}</span><a href="#" id="salir">Salir</a>`
+      : `<a href="#" id="entrarNav">Entrar con Discord</a>`;
+    const s = document.getElementById("salir"); if (s) s.onclick = e => { e.preventDefault(); salir(); };
+    const n = document.getElementById("entrarNav"); if (n) n.onclick = e => { e.preventDefault(); irALogin(); };
+  });
   document.getElementById("pie").textContent = `${CONFIG.nombreServidor} · servidor privado de amigos`;
 })();
 
@@ -58,32 +95,16 @@ const render = {
     const f = document.getElementById("form"), msg = document.getElementById("msg");
     const login = document.getElementById("login"), hola = document.getElementById("hola");
     const aviso = t => { msg.textContent = t; msg.classList.remove("oculto"); };
-    // Discord devuelve el token en la dirección tras "Entrar"; lo guardamos solo en esta pestaña.
-    const hash = new URLSearchParams(location.hash.slice(1));
-    if (hash.get("access_token")) {
-      try { sessionStorage.setItem("dc_token", hash.get("access_token")); } catch {}
-      history.replaceState(null, "", location.pathname);
-    }
-    let token = null;
-    try { token = sessionStorage.getItem("dc_token"); } catch {}
-    let usuario = null;
-    if (token) {
-      try {
-        const r = await fetch("https://discord.com/api/users/@me", { headers: { Authorization: "Bearer " + token } });
-        if (r.ok) { const u = await r.json(); usuario = u.global_name || u.username; }
-        else { try { sessionStorage.removeItem("dc_token"); } catch {} }
-      } catch {}
-    }
-    if (!usuario) {
+    const u = await SESION;
+    if (!u) {
       f.classList.add("oculto"); login.classList.remove("oculto");
       document.getElementById("entrar").onclick = () => {
         if (!CONFIG.discordClientId) { aviso("El inicio de sesión aún no está configurado."); return; }
-        const p = new URLSearchParams({ client_id: CONFIG.discordClientId, response_type: "token",
-          scope: "identify", redirect_uri: location.origin + location.pathname });
-        location.href = "https://discord.com/oauth2/authorize?" + p;
+        irALogin();
       };
       return;
     }
+    const usuario = u.nombre;
     hola.textContent = "Sesión iniciada como " + usuario;
     f.onsubmit = async ev => {
       ev.preventDefault();
