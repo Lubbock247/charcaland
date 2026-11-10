@@ -6,7 +6,7 @@ const PAGINAS = [
 function esc(t) {
   const d = document.createElement("div");
   d.textContent = t;
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 function fechaBonita(f) {
   return new Date(f + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
@@ -68,21 +68,13 @@ const render = {
       `<div class="tarjeta"><span class="etiqueta">${esc(u.etiqueta)}</span>
        <h3>${esc(u.titulo)}</h3><div class="fecha">${fechaBonita(u.fecha)}</div><p>${esc(u.texto)}</p></div>`).join("");
   },
-  mods() {
-    document.getElementById("lista").innerHTML = MODS.map(m =>
-      `<div class="tarjeta" style="margin-bottom:16px"><span class="etiqueta verde">${esc(m.estado)}</span>
-       <h3>${esc(m.nombre)}</h3><p>${esc(m.resumen)}</p>
-       <ul>${m.detalles.map(d => `<li>${esc(d)}</li>`).join("")}</ul></div>`).join("");
-  },
+  mods() { iniciarWiki("mods"); },
   eventos() {
     document.getElementById("lista").innerHTML = EVENTOS.map(e =>
       `<div class="tarjeta"><span class="etiqueta ${e.estado === "Próximo" ? "verde" : "gris"}">${esc(e.estado)}</span>
        <h3>${esc(e.titulo)}</h3><div class="fecha">${fechaBonita(e.fecha)}</div><p>${esc(e.texto)}</p></div>`).join("");
   },
-  lore() {
-    document.getElementById("lista").innerHTML = LORE.map(c =>
-      `<div class="capitulo"><h2>${esc(c.titulo)}</h2><p>${esc(c.texto)}</p></div>`).join("");
-  },
+  lore() { iniciarWiki("lore"); },
   async perfil() {
     const u = await SESION, caja = document.getElementById("perfil");
     if (!u) { caja.innerHTML = `<div class="vacio">Entra con Discord para ver tu perfil.<br><br><a class="btn" href="#" id="entrarPerfil">Entrar con Discord</a></div>`;

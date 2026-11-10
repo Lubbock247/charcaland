@@ -102,3 +102,28 @@ footer { text-align: center; color: var(--suave); padding: 24px 16px; border-top
 .avatar.grande { width: 96px; height: 96px; }
 .ficha { display: flex; align-items: center; gap: 20px; max-width: 480px; }
 @media (max-width: 900px) { .barra { flex-wrap: wrap; } }
+
+/* Wikis */
+main.ancha { max-width: 1200px; }
+.wiki { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 24px; align-items: start; }
+.menu { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 10px; position: sticky; top: 76px; }
+.menu .grupo { margin-bottom: 12px; }
+.menu h4 { margin: 8px 10px 0; font-size: .8rem; letter-spacing: 1px; text-transform: uppercase; color: var(--suave); }
+.menu small { display: block; margin: 0 10px 4px; color: var(--suave); font-size: .72rem; }
+.menu a { display: block; padding: 6px 10px; border-radius: 6px; color: var(--texto); text-decoration: none; font-size: .92rem; }
+.menu a:hover { background: var(--panel2); }
+.menu a.sel { background: var(--acento); color: #0d1a10; font-weight: 700; }
+.menu a.nueva { color: var(--acento); }
+.menu a.nueva:hover { background: var(--panel2); }
+.pagina { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 24px 28px; min-height: 300px; }
+.pagina h2 { font-size: 1.7rem; margin: .2em 0 .5em; }
+.pagina h3 { font-size: 1.3rem; margin: 1.2em 0 .4em; }
+.pagina h4 { font-size: 1.1rem; margin: 1em 0 .3em; }
+.pagina p, .pagina li { max-width: 75ch; }
+.pagina img { max-width: 100%; border-radius: 8px; }
+.pagina code { background: var(--fondo); padding: 1px 6px; border-radius: 4px; }
+.acciones { float: right; }
+.btn.peligro:hover { border-color: #e24b4a; color: #ff8a89; }
+.editor .btn { margin-top: 18px; }
+.editor select, .editor input { margin-bottom: 4px; }
+@media (max-width: 800px) { .wiki { grid-template-columns: 1fr; } .menu { position: static; } }
