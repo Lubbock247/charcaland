@@ -32,13 +32,6 @@ main { max-width: 1000px; margin: 0 auto; padding: 32px 16px 64px; }
 h1 { font-size: 2.2rem; margin: 0 0 8px; }
 h2 { margin-top: 0; }
 .sub { color: var(--suave); margin-bottom: 28px; }
-.hero { text-align: center; padding: 48px 16px 32px; }
-.hero h1 { font-size: 3rem; }
-.ip {
-  display: inline-block; background: var(--panel); border: 2px dashed var(--acento);
-  padding: 10px 20px; border-radius: 8px; font-family: Consolas, monospace; font-size: 1.1rem;
-  margin-top: 12px;
-}
 .rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
 .tarjeta {
   background: var(--panel); border: 1px solid var(--borde); border-radius: 10px;
@@ -75,6 +68,22 @@ button {
 }
 button:hover { filter: brightness(1.1); }
 .aviso { margin-top: 14px; padding: 10px 14px; border-radius: 6px; background: var(--panel2); }
-.oculto { display: none; }
+.oculto { display: none !important; }
 footer { text-align: center; color: var(--suave); padding: 24px 16px; border-top: 1px solid var(--borde); font-size: .9rem; }
 @media (max-width: 600px) { .hero h1 { font-size: 2.1rem; } h1 { font-size: 1.7rem; } }
+
+/* Portada */
+.hero { text-align: center; padding: 56px 16px 44px; background: #12151d; border-bottom: 1px solid var(--borde); }
+.hero h1 { font-size: 2.8rem; margin: 0 0 8px; }
+.hero p { margin: 0 0 22px; color: var(--suave); font-size: 1.1rem; }
+.btn { display: inline-block; padding: 11px 22px; margin: 4px; border-radius: 6px; background: var(--acento); color: #0d1a10; font-weight: 700; text-decoration: none; }
+.btn:hover { filter: brightness(1.1); }
+.btn.g { background: transparent; border: 1px solid var(--borde); color: var(--texto); }
+.btn.g:hover { border-color: var(--acento); }
+.seccion { margin-top: 36px; }
+.seccion > h2 { font-size: .8rem; letter-spacing: 1px; text-transform: uppercase; color: var(--suave); margin-bottom: 12px; }
+.destacada { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; }
+.icono { font-size: 1.6rem; color: var(--acento); line-height: 1; margin-bottom: 8px; }
+.vacio { color: var(--suave); border: 1px dashed var(--borde); border-radius: 10px; padding: 28px; text-align: center; }
+.entrada { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+@media (max-width: 700px) { .destacada { grid-template-columns: 1fr; } .hero h1 { font-size: 2rem; } }

@@ -5,6 +5,7 @@
 
 const CONFIG = {
   nombreServidor: "Charcaland",          // PROVISIONAL
+  invitacionDiscord: "",  // Enlace de invitación al Discord (si está vacío, el botón no sale)
   // Se rellenan cuando se creen en Discord (ver instrucciones):
   discordClientId: "1569682266156957696",   // ID de la aplicación de Discord (para "Entrar con Discord")
   webhookDiscord: "https://discord.com/api/webhooks/1569680522018558060/J8XXc0a-cgfbuvwLY9BKVezpAIgwObbNgUtZd5tra-cUEBtyPDWd5CMS5WKVTokYkQqe",    // Enlace del webhook del canal donde llegan las sugerencias

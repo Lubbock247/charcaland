@@ -1,6 +1,6 @@
 const PAGINAS = [
   ["index.html", "Inicio"], ["updates.html", "Updates"], ["mods.html", "Mods"],
-  ["eventos.html", "Eventos"], ["lore.html", "Lore"], ["sugerencias.html", "Sugerencias"],
+  ["eventos.html", "Eventos"], ["lore.html", "Lore"], ["mercadillo.html", "Mercadillo"], ["sugerencias.html", "Sugerencias"],
 ];
 
 function esc(t) {
@@ -45,9 +45,14 @@ const render = {
   },
   inicio() {
     const u = UPDATES[0], e = EVENTOS[0];
-    document.getElementById("novedad").innerHTML =
-      `<a class="tarjeta" href="updates.html"><span class="etiqueta">Última novedad</span><h3>${esc(u.titulo)}</h3><p>${esc(u.texto)}</p></a>
-       <a class="tarjeta" href="eventos.html"><span class="etiqueta verde">Próximo evento</span><h3>${esc(e.titulo)}</h3><p>${fechaBonita(e.fecha)}</p></a>`;
+    document.getElementById("evento").innerHTML =
+      `<a class="tarjeta" href="eventos.html"><span class="etiqueta verde">${esc(e.estado)}</span><h3>${esc(e.titulo)}</h3><p>${fechaBonita(e.fecha)}</p></a>
+       <a class="tarjeta" href="updates.html"><div class="icono">◆</div><h3>Última update</h3><p>${esc(u.titulo)}</p></a>
+       <a class="tarjeta" href="mercadillo.html"><div class="icono">◆</div><h3>Mercadillo</h3><p>Próximamente</p></a>`;
+    if (CONFIG.invitacionDiscord) {
+      const b = document.getElementById("btnDiscord");
+      b.href = CONFIG.invitacionDiscord; b.classList.remove("oculto");
+    }
   },
   async sugerencias() {
     const f = document.getElementById("form"), msg = document.getElementById("msg");
