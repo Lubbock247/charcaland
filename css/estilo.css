@@ -127,3 +127,33 @@ main.ancha { max-width: 1200px; }
 .editor .btn { margin-top: 18px; }
 .editor select, .editor input { margin-bottom: 4px; }
 @media (max-width: 800px) { .wiki { grid-template-columns: 1fr; } .menu { position: static; } }
+
+/* Wiki estilo enciclopedia */
+.wiki.portada { display: block; }
+.migas { color: var(--suave); font-size: .85rem; margin-bottom: 6px; }
+.migas a { color: var(--suave); }
+.pagina h2.wtitulo { font-size: 2rem; margin: 0 0 4px; padding-bottom: 8px; border-bottom: 1px solid var(--borde); }
+.pagina h3 { font-size: 1.45rem; margin: 1.6em 0 .5em; padding-bottom: 4px; border-bottom: 1px solid var(--borde); }
+.pagina h4 { font-size: 1.15rem; margin: 1.3em 0 .4em; }
+.pagina h5 { font-size: 1rem; margin: 1em 0 .3em; }
+.pagina .fecha:empty { display: none; }
+.pagina a.interno { color: #6fb8ff; }
+.roto { color: #ff8a89; border-bottom: 1px dotted #ff8a89; cursor: help; }
+.toc { background: var(--panel2); border: 1px solid var(--borde); border-radius: 8px; padding: 10px 16px; display: inline-block; min-width: 220px; margin: 12px 0; }
+.toc strong { display: block; margin-bottom: 4px; }
+.toc a { display: block; color: var(--texto); text-decoration: none; font-size: .9rem; padding: 1px 0; }
+.toc a:hover { color: var(--acento); }
+.caja { float: right; width: 280px; margin: 0 0 14px 20px; background: var(--panel2); border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; font-size: .88rem; }
+.caja .cajat { background: var(--acento); color: #0d1a10; font-weight: 700; text-align: center; padding: 6px 10px; }
+.caja table { width: 100%; border-collapse: collapse; }
+.caja th, .caja td { padding: 5px 10px; border-top: 1px solid var(--borde); vertical-align: top; text-align: left; }
+.caja th { width: 42%; color: var(--suave); font-weight: 600; }
+.tabla { overflow-x: auto; margin: 12px 0; clear: none; }
+.pagina table:not(.caja table) { border-collapse: collapse; width: 100%; font-size: .93rem; }
+.pagina .tabla th, .pagina .tabla td { border: 1px solid var(--borde); padding: 7px 12px; text-align: left; vertical-align: top; }
+.pagina .tabla th { background: var(--panel2); }
+.pagina h3, .pagina h4 { clear: both; }
+.menu a.atras { color: var(--suave); font-size: .85rem; margin-bottom: 4px; }
+.tarjeta.nuevawiki { display: flex; align-items: center; justify-content: center; color: var(--acento); border-style: dashed; min-height: 120px; }
+.ayuda { margin: 12px 0; color: var(--suave); font-size: .88rem; }
+.ayuda summary { cursor: pointer; color: var(--texto); }

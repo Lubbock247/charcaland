@@ -52,7 +52,7 @@ function puede(u, seccion, categoria, pagina) {
 
 async function wikiListar(env, seccion) {
   const r = await env.DB.prepare(
-    `SELECT p.id, p.seccion, p.categoria, p.slug, p.titulo, p.padre_id, p.orden, p.autor_id, u.nombre AS autor
+    `SELECT p.id, p.seccion, p.categoria, p.slug, p.titulo, p.padre_id, p.orden, p.autor_id, substr(p.contenido, 1, 400) AS resumen, u.nombre AS autor
      FROM paginas p LEFT JOIN usuarios u ON u.id = p.autor_id WHERE p.seccion = ?1 ORDER BY p.orden, p.titulo`
   ).bind(seccion).all();
   return r.results;
@@ -65,7 +65,7 @@ async function wikiLeer(env, seccion, slug) {
 }
 async function wikiGuardar(env, u, d) {
   const titulo = String(d.titulo || "").trim().slice(0, 80);
-  const contenido = String(d.contenido || "").slice(0, 20000);
+  const contenido = String(d.contenido || "").replace(/\r\n?/g, "\n").slice(0, 20000);
   if (!titulo) return [400, { error: "Falta el título" }];
   let existente = null;
   if (d.id) {
