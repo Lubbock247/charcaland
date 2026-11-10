@@ -19,7 +19,7 @@ header {
   position: sticky; top: 0; z-index: 10;
 }
 .barra {
-  max-width: 1000px; margin: 0 auto; padding: 0 16px;
+  max-width: 1200px; margin: 0 auto; padding: 0 16px;
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px;
 }
 .logo { font-weight: 800; font-size: 1.2rem; padding: 14px 0; color: var(--texto); text-decoration: none; letter-spacing: 1px; }
@@ -93,3 +93,12 @@ footer { text-align: center; color: var(--suave); padding: 24px 16px; border-top
 .usuario a:hover { color: var(--texto); }
 .saldo { color: var(--acento); font-weight: 700; }
 .chip { background: var(--panel2); padding: 4px 12px; border-radius: 99px; }
+
+.barra { max-width: 1200px; flex-wrap: nowrap; }
+.usuario { white-space: nowrap; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: block; border: 2px solid var(--borde); object-fit: cover; }
+.perfil:hover .avatar { border-color: var(--acento); }
+.perfil { padding: 0 !important; }
+.avatar.grande { width: 96px; height: 96px; }
+.ficha { display: flex; align-items: center; gap: 20px; max-width: 480px; }
+@media (max-width: 900px) { .barra { flex-wrap: wrap; } }

@@ -27,6 +27,10 @@ function irALogin() {
     scope: "identify", redirect_uri: location.origin + location.pathname.replace(/[^/]*$/, "") + "sugerencias.html" });
   location.href = "https://discord.com/oauth2/authorize?" + p;
 }
+function avatarDe(u, t) {
+  return u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=${t || 64}`
+                  : "https://cdn.discordapp.com/embed/avatars/0.png";
+}
 function salir() { try { localStorage.removeItem("dc_token"); } catch {} location.reload(); }
 // Devuelve {id, nombre, saldo, rol} o null si no hay sesión.
 const SESION = (async () => {
@@ -51,9 +55,8 @@ const SESION = (async () => {
   SESION.then(u => {
     const el = document.getElementById("usuario");
     el.innerHTML = u
-      ? `<span class="saldo">${u.saldo} monedas</span><span class="chip">${esc(u.nombre)}${u.rol === "admin" ? " · admin" : ""}</span><a href="#" id="salir">Salir</a>`
+      ? `<span class="saldo" title="Tus monedas">${u.saldo} monedas</span><a href="perfil.html" class="perfil" title="Tu perfil"><img class="avatar" src="${avatarDe(u)}" alt="${esc(u.nombre)}"></a>`
       : `<a href="#" id="entrarNav">Entrar con Discord</a>`;
-    const s = document.getElementById("salir"); if (s) s.onclick = e => { e.preventDefault(); salir(); };
     const n = document.getElementById("entrarNav"); if (n) n.onclick = e => { e.preventDefault(); irALogin(); };
   });
   document.getElementById("pie").textContent = `${CONFIG.nombreServidor} · servidor privado de amigos`;
@@ -80,12 +83,24 @@ const render = {
     document.getElementById("lista").innerHTML = LORE.map(c =>
       `<div class="capitulo"><h2>${esc(c.titulo)}</h2><p>${esc(c.texto)}</p></div>`).join("");
   },
+  async perfil() {
+    const u = await SESION, caja = document.getElementById("perfil");
+    if (!u) { caja.innerHTML = `<div class="vacio">Entra con Discord para ver tu perfil.<br><br><a class="btn" href="#" id="entrarPerfil">Entrar con Discord</a></div>`;
+      document.getElementById("entrarPerfil").onclick = e => { e.preventDefault(); irALogin(); }; return; }
+    caja.innerHTML = `<div class="tarjeta ficha"><img class="avatar grande" src="${avatarDe(u, 128)}" alt="">
+      <div><h2 style="margin:0">${esc(u.nombre)}</h2>
+      <span class="etiqueta ${u.rol === "admin" ? "" : "gris"}">${u.rol === "admin" ? "Administrador" : "Jugador"}</span>
+      <p class="saldo" style="font-size:1.4rem;margin:8px 0">${u.saldo} monedas</p>
+      <a class="btn g" href="#" id="btnSalir">Salir</a></div></div>`;
+    document.getElementById("btnSalir").onclick = e => { e.preventDefault(); salir(); };
+  },
   inicio() {
     const u = UPDATES[0], e = EVENTOS[0];
     document.getElementById("evento").innerHTML =
       `<a class="tarjeta" href="eventos.html"><span class="etiqueta verde">${esc(e.estado)}</span><h3>${esc(e.titulo)}</h3><p>${fechaBonita(e.fecha)}</p></a>
        <a class="tarjeta" href="updates.html"><div class="icono">◆</div><h3>Última update</h3><p>${esc(u.titulo)}</p></a>
        <a class="tarjeta" href="mercadillo.html"><div class="icono">◆</div><h3>Mercadillo</h3><p>Próximamente</p></a>`;
+    SESION.then(u => { if (u) document.getElementById("btnEntrar").classList.add("oculto"); });
     if (CONFIG.invitacionDiscord) {
       const b = document.getElementById("btnDiscord");
       b.href = CONFIG.invitacionDiscord; b.classList.remove("oculto");
