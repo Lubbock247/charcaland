@@ -238,3 +238,6 @@ body.en-wiki main.ancha > h1, body.en-wiki main.ancha > .sub { display: none; }
 .wmenu .indice-menu a.ancla:hover { color: var(--texto); background: var(--panel2); }
 .wmenu .indice-menu a.ancla.n4 { padding-left: 22px; font-size: .82rem; }
 .toc a.ancla.n4 { padding-left: 14px; }
+
+.pista { margin: 6px 0; font-size: .85rem; color: var(--suave); }
+.pista i { color: #f2c94c; }

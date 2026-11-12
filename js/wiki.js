@@ -15,6 +15,7 @@ const ICONOS = ["sparkles", "sword", "wand", "shield", "flame", "skull", "crown"
   "diamond", "bolt", "ghost", "snowflake", "trees", "pick", "flask", "planet"];
 
 const normal = t => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+const desescapar = t => t.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 const idDe = t => normal(t).replace(/ /g, "-") || "apartado";
 const icono = (n, extra) => `<i class="ti ti-${esc(n || "book")}${extra ? " " + extra : ""}" aria-hidden="true"></i>`;
 
@@ -23,7 +24,7 @@ const icono = (n, extra) => `<i class="ti ti-${esc(n || "book")}${extra ? " " + 
 function formato(texto, resolver) {
   const inline = t => esc(t)
     .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, nombre, mostrar) => {
-      const p = resolver ? resolver(nombre.trim()) : null;
+      const p = resolver ? resolver(desescapar(nombre).trim()) : null;
       return p ? `<a class="interno" href="#${p.slug}">${mostrar || nombre}</a>`
                : `<span class="roto" title="Esta página aún no existe">${mostrar || nombre}</span>`;
     })
@@ -308,6 +309,7 @@ function iniciarWiki(seccion) {
         <button type="button" data-acc="habilidades">${icono("layout-grid")} Habilidades</button>
         <button type="button" data-acc="tabla">${icono("table")} Tabla</button>
       </div>
+      <p class="pista">${icono("bulb")} Para enlazar otra página escribe <code>[[</code> y elige una de la lista (Enter elige la primera).</p>
       <div id="elegirPagina" class="elegir oculto"><input id="buscaPag" placeholder="Buscar página..."><div id="listaPag"></div></div>
       <div class="dosed"><textarea id="contenido" maxlength="20000" spellcheck="true">${pagina ? esc(pagina.contenido) : ""}</textarea>
         <div class="vistaed"><div class="fecha">Así se verá</div><div id="vista" class="pagina-vista"></div></div></div>
@@ -332,8 +334,31 @@ function iniciarWiki(seccion) {
         : `<p class="fecha">No hay páginas con ese nombre.</p>`;
     };
     busca.oninput = pintarLista;
+    // Al escribir "[[" sale la lista de páginas y se va filtrando con lo que escribes después
+    let auto = false;
+    const consulta = () => { const m = ta.value.slice(0, ta.selectionStart).match(/\[\[([^\[\]|\n]*)$/); return m ? m[1] : null; };
+    const cerrarAuto = () => { if (auto) { auto = false; caja.classList.add("oculto"); } };
+    const completar = titulo => {
+      const q = consulta(), fin = ta.selectionStart, cierra = ta.value.slice(fin, fin + 2) === "]]" ? "" : "]]";
+      ta.setRangeText(titulo + cierra, fin - q.length, fin, "end");
+      if (!cierra) ta.setSelectionRange(ta.selectionStart + 2, ta.selectionStart + 2);
+      cerrarAuto(); ta.focus(); ta.dispatchEvent(new Event("input"));
+    };
+    ta.addEventListener("input", () => {
+      const q = consulta();
+      if (q === null) return cerrarAuto();
+      auto = true; caja.classList.remove("oculto"); busca.value = q; pintarLista();
+    });
+    ta.addEventListener("keydown", e => {
+      if (!auto) return;
+      const primero = lista.querySelector("button[data-t]");
+      if ((e.key === "Enter" || e.key === "Tab") && primero) { e.preventDefault(); completar(primero.dataset.t); }
+      else if (e.key === "Escape") { e.preventDefault(); cerrarAuto(); }
+    });
+    ta.addEventListener("blur", () => setTimeout(() => { if (auto && document.activeElement !== busca) cerrarAuto(); }, 200));
     lista.onclick = e => {
       const b = e.target.closest("button[data-t]"); if (!b) return;
+      if (auto && consulta() !== null) return completar(b.dataset.t);
       const sel = seleccion(ta);
       envolver(ta, "[[" + b.dataset.t + (sel && sel !== b.dataset.t ? "|" : ""), "]]", sel && sel !== b.dataset.t ? sel : "");
       caja.classList.add("oculto");

@@ -38,6 +38,19 @@ const SECCIONES = ["mods", "lore"];
 const CATEGORIAS_LORE = ["mundo", "habilidades", "personajes", "relaciones"];
 const CATEGORIAS_PROPIAS = ["personajes", "relaciones"]; // las crea y edita cada jugador
 
+// Si una página cambia de título, los enlaces [[Título viejo]] de las demás pasan al nuevo
+const normal = t => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+async function seguirEnlaces(env, seccion, viejo, nuevo) {
+  const r = await env.DB.prepare("SELECT id, contenido FROM paginas WHERE seccion = ?1 AND contenido LIKE '%[[%'").bind(seccion).all();
+  const cambios = [];
+  for (const p of r.results) {
+    const c = p.contenido.replace(/\[\[([^\]|]+)(\|[^\]]*)?\]\]/g, (todo, nombre, resto) =>
+      normal(nombre) === normal(viejo) ? `[[${nuevo}${resto || ""}]]` : todo);
+    if (c !== p.contenido) cambios.push(env.DB.prepare("UPDATE paginas SET contenido = ?1 WHERE id = ?2").bind(c, p.id));
+  }
+  if (cambios.length) await env.DB.batch(cambios);
+}
+
 function slugDe(t) {
   return t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "pagina";
@@ -96,6 +109,7 @@ async function wikiGuardar(env, u, d) {
     await env.DB.prepare(
       "UPDATE paginas SET titulo = ?1, contenido = ?2, padre_id = ?3, orden = ?4, icono = ?5, actualizado = datetime('now') WHERE id = ?6"
     ).bind(titulo, contenido, padre, orden, icono, existente.id).run();
+    if (titulo !== existente.titulo) await seguirEnlaces(env, seccion, existente.titulo, titulo);
     return [200, { slug: existente.slug }];
   }
   let slug = slugDe(titulo), n = 1;
