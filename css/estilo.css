@@ -250,3 +250,12 @@ body.en-wiki main.ancha > h1, body.en-wiki main.ancha > .sub { display: none; }
 .acciones-noticia .btn { padding: 6px 14px; margin: 0 6px 0 0; }
 .editor-noticia { text-align: left; max-width: 560px; max-height: 90vh; overflow-y: auto; }
 .editor-noticia h2 { text-align: center; }
+.pestanas-eventos { margin: 0 0 14px; border-bottom: 1px solid var(--borde); }
+.tarjeta.pasado { opacity: .6; filter: grayscale(.6); }
+.tarjeta.pasado:hover { opacity: .85; }
+.leer-mas { display: inline-block; margin-top: 10px; color: var(--acento); font-weight: 600; font-size: .9rem; }
+.volver { display: inline-block; margin-bottom: 12px; text-decoration: none; font-weight: 600; }
+.noticia-completa h2 { margin: 4px 0 6px; }
+.resumen-noticia { font-weight: 600; color: var(--texto) !important; margin: 14px 0 !important; }
+.noticia-completa .texto-noticia { white-space: pre-wrap; line-height: 1.6; }
+textarea.corto { min-height: 70px; }

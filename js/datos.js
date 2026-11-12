@@ -10,8 +10,3 @@ const CONFIG = {
   // Se rellenan cuando se creen en Discord (ver instrucciones):
   discordClientId: "1569682266156957696",   // ID de la aplicación de Discord (para "Entrar con Discord")
 };
-
-const EVENTOS = [
-  { fecha: "2026-12-01", titulo: "Evento de ejemplo", estado: "Próximo",
-    texto: "PROVISIONAL: aquí irá la descripción, las reglas y los premios." },
-];

@@ -43,3 +43,15 @@ Apunta aquí lo que veas raro:
 
 **Con un amigo (no admin):**
 - [ ] Ve las updates pero no los botones.
+
+## Eventos con pestañas, resumen y detalle (12/11/2026)
+
+**Ya comprobado por Claude** (con eventos inventados, sin guardar): pestañas Inicio / Próximamente / Pasados, eventos sin fecha como «Planificado», pasados en gris, y al pulsar una tarjeta se abre el texto completo.
+
+**Contigo (admin):**
+- [ ] En la portada ya no sale «Unirme al Discord» si has entrado.
+- [ ] Creas un evento con fecha futura: sale en Inicio y Próximamente, y en la portada.
+- [ ] Creas uno sin fecha: sale solo en Próximamente como «Planificado».
+- [ ] Creas uno con fecha pasada: sale en Pasados, en gris.
+- [ ] Pulsas una tarjeta (evento o update): se abre con el texto completo; «← Volver» regresa.
+- [ ] Editar y borrar desde la vista completa.

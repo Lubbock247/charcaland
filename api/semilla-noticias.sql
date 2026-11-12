@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS noticias (
   titulo TEXT NOT NULL,
   fecha TEXT,                      -- AAAA-MM-DD; vacía = sin fecha (eventos planificados)
   etiqueta TEXT NOT NULL DEFAULT '',
+  resumen TEXT NOT NULL DEFAULT '',
   texto TEXT NOT NULL DEFAULT '',
   cierre_votacion TEXT,
   votacion_cerrada INTEGER NOT NULL DEFAULT 0,

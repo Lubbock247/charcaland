@@ -155,7 +155,7 @@ const fechaValida = f => /^\d{4}-\d{2}-\d{2}$/.test(f) && !isNaN(Date.parse(f));
 
 async function noticiasListar(env, tipo) {
   const r = await env.DB.prepare(
-    "SELECT id, tipo, titulo, fecha, etiqueta, texto, cierre_votacion, votacion_cerrada FROM noticias WHERE tipo = ?1 ORDER BY fecha IS NULL, fecha DESC, id DESC"
+    "SELECT id, tipo, titulo, fecha, etiqueta, resumen, texto, cierre_votacion, votacion_cerrada FROM noticias WHERE tipo = ?1 ORDER BY fecha IS NULL, fecha DESC, id DESC"
   ).bind(tipo).all();
   return r.results;
 }
@@ -171,16 +171,18 @@ async function noticiaGuardar(env, u, d) {
   if (!fecha && tipo === "update") return [400, { error: "Falta la fecha" }];
   const etiqueta = String(d.etiqueta || "").trim().slice(0, 30);
   const texto = String(d.texto || "").trim().slice(0, 4000);
+  const resumen = String(d.resumen || "").trim().slice(0, 300);
+  if (!resumen) return [400, { error: "Falta el resumen" }];
   if (d.id) {
     const r = await env.DB.prepare(
-      "UPDATE noticias SET titulo = ?1, fecha = ?2, etiqueta = ?3, texto = ?4, autor_id = ?5, actualizado = datetime('now') WHERE id = ?6 AND tipo = ?7"
-    ).bind(titulo, fecha || null, etiqueta, texto, u.id, Number(d.id), tipo).run();
+      "UPDATE noticias SET titulo = ?1, fecha = ?2, etiqueta = ?3, texto = ?4, autor_id = ?5, resumen = ?8, actualizado = datetime('now') WHERE id = ?6 AND tipo = ?7"
+    ).bind(titulo, fecha || null, etiqueta, texto, u.id, Number(d.id), tipo, resumen).run();
     if (!r.meta.changes) return [404, { error: "No existe" }];
     return [200, { id: Number(d.id) }];
   }
   const r = await env.DB.prepare(
-    "INSERT INTO noticias (tipo, titulo, fecha, etiqueta, texto, autor_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
-  ).bind(tipo, titulo, fecha || null, etiqueta, texto, u.id).run();
+    "INSERT INTO noticias (tipo, titulo, fecha, etiqueta, texto, autor_id, resumen) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
+  ).bind(tipo, titulo, fecha || null, etiqueta, texto, u.id, resumen).run();
   return [200, { id: r.meta.last_row_id }];
 }
 
