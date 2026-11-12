@@ -28,5 +28,5 @@ Es privada, para el usuario y sus amigos. Repositorio git propio (rama `main`).
 
 ## Por revisar
 
-- **Webhook de Discord en `js/datos.js`:** la URL del webhook, con su token, está a la vista en el JavaScript de la web (`CONFIG.webhookDiscord`). Cualquiera que abra la página puede usarla. Conviene pasar el envío a la API del Worker y guardar el webhook como secreto. **Pendiente de decidir con el usuario.**
-- **Publicación:** no está documentado aquí cómo se publica el front (ORIGENES sugiere GitHub Pages). Confirmar con el usuario antes de dar pasos de publicación.
+- **Sugerencias:** se envían por `POST /api/sugerencia` (hace falta sesión de Discord; 30 s entre envíos por usuario). El webhook es el secreto `WEBHOOK_SUGERENCIAS` del Worker (`npx wrangler secret put WEBHOOK_SUGERENCIAS`); nunca va en el front. El webhook antiguo quedó en el historial de git: hay que borrarlo en Discord.
+- **Publicación:** el front está publicado en GitHub Pages con enlace público; al usuario le vale así. Lo que se sube a `main` acaba en la web, así que no hagas push sin que lo pida.

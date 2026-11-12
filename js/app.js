@@ -115,15 +115,15 @@ const render = {
     hola.textContent = "Sesión iniciada como " + usuario;
     f.onsubmit = async ev => {
       ev.preventDefault();
-      if (!CONFIG.webhookDiscord) { aviso("El buzón aún no está conectado. Cuéntaselo al administrador."); return; }
       const d = Object.fromEntries(new FormData(f));
-      const contenido = `**Sugerencia de ${usuario}:**
-(${d.tipo})
-${d.texto}`;
+      let t = null;
+      try { t = localStorage.getItem("dc_token"); } catch {}
       try {
-        const r = await fetch(CONFIG.webhookDiscord, { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: "oompa-lompa", content: contenido, allowed_mentions: { parse: [] } }) });
-        if (!r.ok) throw 0;
+        const r = await fetch(CONFIG.api + "/api/sugerencia", { method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + t },
+          body: JSON.stringify({ tipo: d.tipo, texto: d.texto }) });
+        const res = await r.json().catch(() => ({}));
+        if (!r.ok) { aviso(res.error ? res.error + "." : "No se pudo enviar. Inténtalo más tarde."); return; }
         f.reset(); aviso("¡Gracias! Hemos recibido tu sugerencia.");
       } catch { aviso("No se pudo enviar. Inténtalo más tarde."); }
     };

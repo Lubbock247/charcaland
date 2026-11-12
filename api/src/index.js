@@ -131,6 +131,29 @@ async function wikiBorrar(env, u, id) {
   return [200, { ok: true }];
 }
 
+// Sugerencias: el webhook de Discord es un secreto del Worker (WEBHOOK_SUGERENCIAS),
+// nunca llega a la web. El nombre lo pone la API con la sesión de Discord, no el navegador.
+const ultimaSugerencia = new Map(); // id de usuario -> hora del último envío (por instancia)
+async function enviarSugerencia(env, u, d) {
+  if (!env.WEBHOOK_SUGERENCIAS) return [503, { error: "El buzón aún no está conectado" }];
+  const texto = String(d.texto || "").trim().slice(0, 1500);
+  const tipo = String(d.tipo || "Otro").trim().slice(0, 40);
+  if (!texto) return [400, { error: "La sugerencia está vacía" }];
+  const ahora = Date.now();
+  if (ahora - (ultimaSugerencia.get(u.id) || 0) < 30000) return [429, { error: "Espera un poco antes de mandar otra" }];
+  ultimaSugerencia.set(u.id, ahora);
+  const p = Object.fromEntries(new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid",
+    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+    .formatToParts(new Date(ahora)).map(x => [x.type, x.value]));
+  const fecha = `${p.day}/${p.month}/${p.year} - ${p.hour}:${p.minute}`;
+  const contenido = `Sugerencia de ${u.nombre} sobre ${tipo}:\n${texto}\n${fecha}`;
+  const r = await fetch(env.WEBHOOK_SUGERENCIAS, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: "oompa-lompa", content: contenido, allowed_mentions: { parse: [] } }),
+  });
+  return r.ok ? [200, { ok: true }] : [502, { error: "Discord no aceptó el mensaje" }];
+}
+
 export default {
   async fetch(req, env) {
     const cab = cors(env, req);
@@ -158,6 +181,12 @@ export default {
         const u = await usuarioDe(req, env);
         if (!u) return json({ error: "No has iniciado sesión" }, 401, cab);
         const [est, cuerpo] = await wikiBorrar(env, u, b[1]);
+        return json(cuerpo, est, cab);
+      }
+      if (ruta === "/api/sugerencia" && req.method === "POST") {
+        const u = await usuarioDe(req, env);
+        if (!u) return json({ error: "No has iniciado sesión" }, 401, cab);
+        const [est, cuerpo] = await enviarSugerencia(env, u, await req.json());
         return json(cuerpo, est, cab);
       }
       return json({ error: "No existe" }, 404, cab);
