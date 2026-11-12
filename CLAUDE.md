@@ -30,6 +30,6 @@ Es privada, para el usuario y sus amigos. Repositorio git propio (rama `main`).
 
 - **Sugerencias:** se envían por `POST /api/sugerencia` (hace falta sesión de Discord; 30 s entre envíos por usuario). El webhook es el secreto `WEBHOOK_SUGERENCIAS` del Worker (`npx wrangler secret put WEBHOOK_SUGERENCIAS`); nunca va en el front. El webhook antiguo quedó en el historial de git: hay que borrarlo en Discord.
 - **Publicación:** el front está publicado en GitHub Pages con enlace público; al usuario le vale así. Lo que se sube a `main` acaba en la web, así que no hagas push sin que lo pida.
-- **Votaciones:** un evento con 2 o más opciones es una votación (tablas `opciones` y `votos`, ruta `POST /api/votar`, un voto por persona y cambiable). Las updates usan `etiqueta` como versión (`1.0.0`).
+- **Votaciones:** un evento con 2 o más opciones es una votación (tablas `opciones` y `votos`, ruta `POST /api/votar`, que pone o quita el voto). Opciones: `multiple` (varias respuestas) y `anonima` (solo los admins ven quién votó). Se vota desde la lista o dentro del evento; en eventos pasados ya no se puede. No hay «cerrar votación»: el usuario no la quiere. Los eventos sin fecha con `en_inicio` salen en la pestaña Inicio. Las updates usan `etiqueta` como versión (`1.0.0`); los eventos no tienen etiqueta ni píldoras de estado.
 - **Para el futuro:** publicar los eventos también en «Eventos» del servidor de Discord (hará falta el bot con permiso de gestionar eventos).
 - **Por probar:** `por-probar.md` recoge lo que necesita cuentas reales de Discord.

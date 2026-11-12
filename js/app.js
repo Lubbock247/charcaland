@@ -108,30 +108,12 @@ function avisoFuera() {
 
 // ---- Eventos y updates ----
 const hoyMadrid = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
-// Estado del evento, automático por la fecha
-function estadoEvento(n) {
-  if (!n.fecha) return ["Planificado", ""];
-  return n.fecha < hoyMadrid() ? ["Terminado", "gris"] : ["Próximo", "verde"];
-}
 const esVotacion = n => n.opciones && n.opciones.length > 1;
-const votacionAbierta = n => esVotacion(n) && !n.votacion_cerrada;
+const esPasado = n => n.tipo === "evento" && n.fecha && n.fecha < hoyMadrid();
 // Título como se muestra: en updates, "1.0.0 - Nombre"
 const tituloNoticia = n => n.tipo === "update" && n.etiqueta ? `${n.etiqueta} - ${n.titulo}` : n.titulo;
-function etiquetasNoticia(n) {
-  if (n.tipo === "update") return "";
-  const [txt, color] = estadoEvento(n);
-  return `<span class="etiqueta ${color}">${txt}</span>` +
-    (esVotacion(n) ? ` <span class="etiqueta votacion">${n.votacion_cerrada ? "Votación cerrada" : "Votación"}</span>` : "") +
-    (n.etiqueta ? ` <span class="etiqueta">${esc(n.etiqueta)}</span>` : "");
-}
 const fechaNoticia = n => n.fecha ? fechaBonita(n.fecha) : "Fecha por decidir";
-const esPasado = n => n.tipo === "evento" && n.fecha && n.fecha < hoyMadrid();
-function tarjetaNoticia(n, enlace) {
-  return `<${enlace ? `a href="${enlace}"` : "div"} class="tarjeta ${esPasado(n) ? "pasado" : ""}">${etiquetasNoticia(n)}
-    <h3>${esc(tituloNoticia(n))}</h3><div class="fecha">${fechaNoticia(n)}</div><p>${esc(n.resumen)}</p>
-    <span class="leer-mas">Leer más →</span></${enlace ? "a" : "div"}>`;
-}
-// Versión siguiente a la más alta (1.0.0 si no hay ninguna)
+// Siguiente versión a la más alta (1.0.0 si no hay ninguna)
 function siguienteVersion(items) {
   const vs = items.map(x => (x.etiqueta || "").split(".").map(Number)).filter(v => v.length === 3 && !v.some(isNaN));
   if (!vs.length) return "1.0.0";
@@ -140,6 +122,31 @@ function siguienteVersion(items) {
   return `${M}.${m}.${p + 1}`;
 }
 
+// Votación: se ve y se vota igual en la lista y dentro del evento.
+function htmlVotacion(n, u, admin) {
+  const total = n.opciones.reduce((s, o) => s + o.votos, 0);
+  const abierta = !esPasado(n), puedeVotar = u && abierta;
+  const mios = n.mis_votos || [];
+  const max = Math.max(...n.opciones.map(o => o.votos));
+  const etiq = [n.multiple ? "Varias respuestas" : "Una respuesta", n.anonima ? "Anónima" : "Pública"].join(" · ");
+  return `<div class="votacion-caja"><div class="votacion-cab"><b>Votación</b><span>${etiq}</span></div>
+    ${n.opciones.map(o => {
+      const pct = total ? Math.round(o.votos * 100 / total) : 0;
+      const mio = mios.includes(o.id), ganadora = !abierta && total && o.votos === max;
+      const quien = o.votantes && o.votantes.length ? `<span class="votantes">${o.votantes.map(esc).join(", ")}${n.anonima ? " · solo lo ven los admins" : ""}</span>` : "";
+      return `<${puedeVotar ? `button type="button" data-votar="${o.id}" data-noticia="${n.id}"` : "div"} class="opcion-voto ${mio ? "mia" : ""} ${ganadora ? "ganadora" : ""}">
+        <span class="barra-voto" style="width:${pct}%"></span>
+        <span class="marca-voto">${mio ? "✓" : ""}</span>
+        <span class="txt-voto">${esc(o.texto)}${quien}</span><span class="num-voto">${o.votos}</span>
+      </${puedeVotar ? "button" : "div"}>`; }).join("")}
+    <p class="ayuda">${total} voto${total === 1 ? "" : "s"}${!abierta ? " · votación terminada" : u ? "" : " · entra con Discord para votar"}</p></div>`;
+}
+
+// Interruptor bonito (on/off) para el formulario
+const interruptor = (nombre, texto, activo, ayuda) =>
+  `<label class="interruptor"><input type="checkbox" name="${nombre}" ${activo ? "checked" : ""}><span class="pista"></span>
+   <span><b>${texto}</b>${ayuda ? `<small>${ayuda}</small>` : ""}</span></label>`;
+
 // Ventana para crear o editar un evento o una update (solo administradores), con vista previa.
 function editorNoticia(tipo, n, items, alGuardar) {
   const ev = tipo === "evento";
@@ -147,16 +154,18 @@ function editorNoticia(tipo, n, items, alGuardar) {
   fondo.className = "fondo-fuera";
   fondo.innerHTML = `<form class="aviso-fuera editor-noticia">
     <h2>${n ? "Editar" : ev ? "Nuevo" : "Nueva"} ${ev ? "evento" : "update"}</h2>
-    ${ev ? "" : `<label>Versión</label><input name="etiqueta" required pattern="\\d+\\.\\d+\\.\\d+" placeholder="1.0.0" value="${esc(n ? n.etiqueta : siguienteVersion(items))}">`}
+    ${ev ? "" : `<label>Versión</label><input name="etiqueta" required pattern="\\d+\\.\\d+\\.\\d+" value="${esc(n ? n.etiqueta : siguienteVersion(items))}">`}
     <label>Título</label><input name="titulo" required maxlength="120" value="${esc(n ? n.titulo : "")}">
     <label>Fecha</label><input name="fecha" type="date" ${ev ? "" : "required"} value="${esc(n ? n.fecha || "" : ev ? "" : hoyMadrid())}">
-    ${ev ? `<p class="ayuda">Sin fecha, el evento sale como «Planificado».</p>
-    <label>Etiqueta</label><input name="etiqueta" maxlength="30" placeholder="PvP, Construcción…" value="${esc(n ? n.etiqueta : "")}">` : ""}
-    <label>Texto de vista previa</label><textarea name="resumen" class="corto" maxlength="300" required placeholder="Una o dos frases: lo que se ve en la lista.">${esc(n ? n.resumen : "")}</textarea>
-    <label>Texto completo</label><textarea name="texto" maxlength="4000" placeholder="Lo que se lee al abrirla.">${esc(n ? n.texto : "")}</textarea>
+    ${ev ? `<div id="cajaInicio">${interruptor("en_inicio", "Mostrar en Inicio", n && n.en_inicio, "Para eventos sin fecha")}</div>` : ""}
+    <label>Texto de vista previa</label><textarea name="resumen" class="corto" maxlength="300" required>${esc(n ? n.resumen : "")}</textarea>
+    <label>Texto completo</label><textarea name="texto" maxlength="4000">${esc(n ? n.texto : "")}</textarea>
     ${ev ? `<label>Opciones de votación</label>
-    <textarea name="opciones" class="corto" placeholder="Una por línea. Déjalo vacío si no hay votación.">${esc(n && n.opciones ? n.opciones.map(o => o.texto).join("\n") : "")}</textarea>
-    <label class="casilla"><input type="checkbox" name="votacion_cerrada" ${n && n.votacion_cerrada ? "checked" : ""}> Votación cerrada</label>` : ""}
+    <textarea name="opciones" class="corto" placeholder="Una opción por línea">${esc(n && n.opciones ? n.opciones.map(o => o.texto).join("\n") : "")}</textarea>
+    <div id="cajaVotacion">
+      ${interruptor("multiple", "Varias respuestas", n && n.multiple, "Cada uno puede votar más de una opción")}
+      ${interruptor("anonima", "Anónima", n && n.anonima, "Solo los admins ven quién votó")}
+    </div>` : ""}
     <label>Así se verá</label><div id="previaNoticia"></div>
     <div class="aviso oculto" id="errNoticia"></div>
     <button type="submit">Guardar</button> <a class="btn g" href="#" id="cancelarNoticia">Cancelar</a>
@@ -166,14 +175,18 @@ function editorNoticia(tipo, n, items, alGuardar) {
   const datos = () => {
     const d = Object.fromEntries(new FormData(f));
     d.opciones = (d.opciones || "").split("\n").map(t => t.trim()).filter(Boolean);
-    d.votacion_cerrada = !!d.votacion_cerrada;
+    for (const k of ["multiple", "anonima", "en_inicio"]) d[k] = !!d[k];
     return d;
   };
   const previa = () => {
     const d = datos();
+    if (ev) {   // solo se enseña lo que aplica
+      fondo.querySelector("#cajaInicio").classList.toggle("oculto", !!d.fecha);
+      fondo.querySelector("#cajaVotacion").classList.toggle("oculto", d.opciones.length < 2);
+    }
     fondo.querySelector("#previaNoticia").innerHTML = tarjetaNoticia({ ...d, tipo,
       titulo: d.titulo || "Título", resumen: d.resumen || "Texto de vista previa…",
-      opciones: d.opciones.map(t => ({ texto: t })), votacion_cerrada: d.votacion_cerrada ? 1 : 0 });
+      opciones: d.opciones.map((t, i) => ({ id: i, texto: t, votos: 0 })) }, null, null, false);
   };
   f.oninput = previa; previa();
   fondo.querySelector("#cancelarNoticia").onclick = e => { e.preventDefault(); fondo.remove(); };
@@ -186,24 +199,14 @@ function editorNoticia(tipo, n, items, alGuardar) {
   };
 }
 
-// Votación dentro de la vista completa de un evento
-function htmlVotacion(n, u) {
-  const total = n.opciones.reduce((s, o) => s + o.votos, 0);
-  const puedeVotar = u && !n.votacion_cerrada;
-  const max = Math.max(...n.opciones.map(o => o.votos));
-  return `<div class="votacion-caja"><h3>${n.votacion_cerrada ? "Resultado de la votación" : "Votación"}</h3>
-    ${n.opciones.map(o => {
-      const pct = total ? Math.round(o.votos * 100 / total) : 0;
-      const mio = n.mi_voto === o.id, ganadora = n.votacion_cerrada && total && o.votos === max;
-      return `<${puedeVotar ? `button type="button" data-votar="${o.id}"` : "div"} class="opcion-voto ${mio ? "mia" : ""} ${ganadora ? "ganadora" : ""}">
-        <span class="barra-voto" style="width:${pct}%"></span>
-        <span class="txt-voto">${esc(o.texto)}${mio ? " · tu voto" : ""}</span><span class="num-voto">${o.votos} (${pct}%)</span>
-      </${puedeVotar ? "button" : "div"}>`; }).join("")}
-    <p class="ayuda">${total} voto${total === 1 ? "" : "s"}. ${n.votacion_cerrada ? "La votación está cerrada." :
-      u ? "Pulsa una opción para votar; puedes cambiar tu voto." : "Entra con Discord para votar."}</p></div>`;
+// Tarjeta de la lista. Se abre al pulsarla (menos al pulsar una opción de la votación).
+function tarjetaNoticia(n, u, admin, clicable) {
+  return `<div class="tarjeta noticia ${clicable ? "clicable" : ""} ${esPasado(n) ? "pasado" : ""}" ${clicable ? `data-abrir="${n.id}"` : ""}>
+    <h3>${esc(tituloNoticia(n))}</h3><div class="fecha">${fechaNoticia(n)}</div><p>${esc(n.resumen)}</p>
+    ${esVotacion(n) ? htmlVotacion(n, u, admin) : ""}</div>`;
 }
 
-// Página de Eventos o de Updates: tarjetas con vista previa (pestañas en eventos)
+// Página de Eventos o de Updates: tarjetas (con pestañas en eventos)
 // y, al pulsar una, el texto completo (dirección #ID).
 async function paginaNoticias(tipo) {
   const ev = tipo === "evento";
@@ -214,20 +217,26 @@ async function paginaNoticias(tipo) {
   const recargar = () => paginaNoticias(tipo);
   const PESTANAS = [["inicio", "Inicio"], ["proximamente", "Próximamente"], ["pasados", "Pasados"]];
 
+  function enlazar() {
+    caja.querySelectorAll("[data-abrir]").forEach(t => t.onclick = () => { location.hash = t.dataset.abrir; });
+    caja.querySelectorAll("[data-votar]").forEach(b => b.onclick = async e => {
+      e.stopPropagation();
+      try { await api("/api/votar", { method: "POST", body: JSON.stringify({ noticia_id: Number(b.dataset.noticia), opcion_id: Number(b.dataset.votar) }) }); recargar(); }
+      catch (er) { alert(er.message); } });
+  }
+
   function pintar() {
     const h = location.hash.slice(1);
     const n = /^\d+$/.test(h) && items.find(x => x.id == h);
     if (n) {   // Vista de una sola, con el texto completo
-      caja.innerHTML = `<a href="#" class="volver">← Volver</a>
-        <div class="tarjeta noticia-completa ${esPasado(n) ? "pasado" : ""}">${etiquetasNoticia(n)}
+      caja.innerHTML = `<a href="#" class="btn g volver">← Volver</a>
+        <div class="tarjeta noticia-completa ${esPasado(n) ? "pasado" : ""}">
         <h2>${esc(tituloNoticia(n))}</h2><div class="fecha">${fechaNoticia(n)}</div>
         <p class="resumen-noticia">${esc(n.resumen)}</p><div class="texto-noticia">${esc(n.texto)}</div>
-        ${esVotacion(n) ? htmlVotacion(n, u) : ""}
+        ${esVotacion(n) ? htmlVotacion(n, u, admin) : ""}
         ${admin ? `<div class="acciones-noticia"><a class="btn g" href="#" id="editarN">Editar</a><a class="btn g peligro" href="#" id="borrarN">Borrar</a></div>` : ""}</div>`;
       caja.querySelector(".volver").onclick = e => { e.preventDefault(); history.length > 1 ? history.back() : (location.hash = ""); };
-      caja.querySelectorAll("[data-votar]").forEach(b => b.onclick = async () => {
-        try { await api("/api/votar", { method: "POST", body: JSON.stringify({ noticia_id: n.id, opcion_id: Number(b.dataset.votar) }) }); recargar(); }
-        catch (er) { alert(er.message); } });
+      enlazar();
       if (admin) {
         document.getElementById("editarN").onclick = e => { e.preventDefault(); editorNoticia(tipo, n, items, recargar); };
         document.getElementById("borrarN").onclick = async e => { e.preventDefault();
@@ -244,8 +253,8 @@ async function paginaNoticias(tipo) {
       const sinFecha = items.filter(x => !x.fecha);
       if (sel === "inicio") {
         const cerca = conFecha.slice(0, 3);
-        lista = [...cerca, ...items.filter(x => votacionAbierta(x) && !esPasado(x) && !cerca.includes(x))];
-        vacio = "No hay eventos próximos ni votaciones abiertas.";
+        lista = [...cerca, ...items.filter(x => !cerca.includes(x) && !esPasado(x) && (esVotacion(x) || (!x.fecha && x.en_inicio)))];
+        vacio = "No hay eventos próximos ni votaciones.";
       }
       if (sel === "proximamente") lista = [...conFecha, ...sinFecha];
       if (sel === "pasados") lista = items.filter(esPasado);
@@ -253,7 +262,8 @@ async function paginaNoticias(tipo) {
         `<a href="#${id}" class="${id === sel ? "sel" : ""}">${t}</a>`).join("")}</div>`;
     }
     caja.innerHTML = pestanas + (admin ? `<div><a class="btn" href="#" id="nuevaNoticia">+ ${ev ? "Nuevo evento" : "Nueva update"}</a></div>` : "") +
-      (lista.length ? lista.map(n => tarjetaNoticia(n, "#" + n.id)).join("") : `<div class="vacio">${vacio}</div>`);
+      (lista.length ? lista.map(n => tarjetaNoticia(n, u, admin, true)).join("") : `<div class="vacio">${vacio}</div>`);
+    enlazar();
     if (admin) document.getElementById("nuevaNoticia").onclick = e => { e.preventDefault(); editorNoticia(tipo, null, items, recargar); };
   }
   window.onhashchange = () => { pintar(); scrollTo(0, 0); };
@@ -281,7 +291,7 @@ const render = {
     const u = ups[0];
     const e = evs.filter(x => x.fecha && x.fecha >= hoyMadrid()).sort((a, b) => a.fecha < b.fecha ? -1 : 1)[0];
     document.getElementById("evento").innerHTML =
-      (e ? `<a class="tarjeta" href="eventos.html#${e.id}"><span class="etiqueta verde">Próximo</span><h3>${esc(e.titulo)}</h3><p>${fechaBonita(e.fecha)}</p></a>`
+      (e ? `<a class="tarjeta" href="eventos.html#${e.id}"><h3>${esc(e.titulo)}</h3><p>${fechaBonita(e.fecha)}</p></a>`
          : `<a class="tarjeta" href="eventos.html#proximamente"><div class="icono">◆</div><h3>Eventos</h3><p>No hay eventos próximos con fecha</p></a>`) +
       `<a class="tarjeta" href="updates.html${u ? "#" + u.id : ""}"><div class="icono">◆</div><h3>Última update</h3><p>${esc(u ? tituloNoticia(u) : "Aún no hay updates")}</p></a>
        <a class="tarjeta" href="mercadillo.html"><div class="icono">◆</div><h3>Mercadillo</h3><p>Próximamente</p></a>`;

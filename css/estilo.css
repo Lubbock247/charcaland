@@ -274,3 +274,23 @@ button.opcion-voto:hover { border-color: var(--acento); }
 .barra-voto { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(90, 209, 106, .18); }
 .txt-voto, .num-voto { position: relative; }
 .num-voto { color: var(--suave); white-space: nowrap; }
+/* Eventos y updates: tarjetas clicables, votación y formulario */
+.tarjeta.clicable { cursor: pointer; }
+.tarjeta.clicable:hover { border-color: var(--acento); }
+.volver { margin: 0 0 14px !important; padding: 8px 16px !important; }
+.votacion-caja { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--borde); }
+.votacion-cab { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.votacion-cab span { color: var(--suave); font-size: .8rem; }
+.opcion-voto { align-items: center; }
+.marca-voto { position: relative; width: 18px; height: 18px; flex: none; border: 2px solid var(--borde); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: .7rem; color: #0d1a10; }
+.opcion-voto.mia .marca-voto { background: var(--acento); border-color: var(--acento); }
+.txt-voto { flex: 1; }
+.votantes { display: block; color: var(--suave); font-size: .78rem; margin-top: 2px; }
+.interruptor { display: flex; align-items: center; gap: 12px; margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo); cursor: pointer; font-weight: 400; }
+.interruptor input { position: absolute; opacity: 0; width: 0; height: 0; }
+.interruptor .pista { position: relative; flex: none; width: 40px; height: 22px; border-radius: 99px; background: var(--panel2); border: 1px solid var(--borde); transition: .15s; }
+.interruptor .pista::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--suave); transition: .15s; }
+.interruptor input:checked + .pista { background: var(--acento); border-color: var(--acento); }
+.interruptor input:checked + .pista::after { left: 20px; background: #0d1a10; }
+.interruptor input:focus-visible + .pista { outline: 2px solid var(--acento); outline-offset: 2px; }
+.interruptor small { display: block; color: var(--suave); font-size: .8rem; }

@@ -33,8 +33,9 @@ CREATE TABLE IF NOT EXISTS noticias (
   etiqueta TEXT NOT NULL DEFAULT '',
   resumen TEXT NOT NULL DEFAULT '',
   texto TEXT NOT NULL DEFAULT '',
-  cierre_votacion TEXT,
-  votacion_cerrada INTEGER NOT NULL DEFAULT 0,
+  multiple INTEGER NOT NULL DEFAULT 0,   -- votación con varias respuestas
+  anonima INTEGER NOT NULL DEFAULT 0,    -- solo los admins ven quién votó
+  en_inicio INTEGER NOT NULL DEFAULT 0,  -- evento sin fecha que sale en la pestaña Inicio
   autor_id TEXT,
   actualizado TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -50,5 +51,5 @@ CREATE TABLE IF NOT EXISTS votos (
   noticia_id INTEGER NOT NULL,
   usuario_id TEXT NOT NULL,
   opcion_id INTEGER NOT NULL,
-  PRIMARY KEY (noticia_id, usuario_id)
+  PRIMARY KEY (noticia_id, usuario_id, opcion_id)   -- en votaciones de varias respuestas, un voto por opción
 );

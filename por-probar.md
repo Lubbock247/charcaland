@@ -69,3 +69,14 @@ Apunta aquí lo que veas raro:
 
 **Con un amigo:**
 - [ ] Puede votar, pero no ve los botones de admin.
+
+## Votaciones nuevas y limpieza (12/11/2026)
+
+**Ya comprobado por Claude:** sin píldoras ni «Leer más»; la votación se ve en la lista con tu voto de «Cuando comienza el server» conservado; los interruptores del formulario se ven bien.
+
+**Contigo:**
+- [ ] Votas desde la lista sin abrir el evento; al pulsar otra vez tu opción, se quita el voto.
+- [ ] Con «Varias respuestas», puedes marcar más de una.
+- [ ] Con «Anónima», tú (admin) ves los nombres; un amigo no.
+- [ ] Un evento sin fecha con «Mostrar en Inicio» sale en la pestaña Inicio.
+- [ ] El botón «← Volver» se ve bien.

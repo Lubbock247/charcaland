@@ -153,20 +153,29 @@ async function wikiBorrar(env, u, id) {
 const TIPOS_NOTICIA = { eventos: "evento", updates: "update" };
 const fechaValida = f => /^\d{4}-\d{2}-\d{2}$/.test(f) && !isNaN(Date.parse(f));
 
+const hoyMadrid = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
+
 async function noticiasListar(env, tipo, u) {
   const r = await env.DB.prepare(
-    "SELECT id, tipo, titulo, fecha, etiqueta, resumen, texto, cierre_votacion, votacion_cerrada FROM noticias WHERE tipo = ?1 ORDER BY fecha IS NULL, fecha DESC, id DESC"
+    "SELECT id, tipo, titulo, fecha, etiqueta, resumen, texto, multiple, anonima, en_inicio FROM noticias WHERE tipo = ?1 ORDER BY fecha IS NULL, fecha DESC, id DESC"
   ).bind(tipo).all();
   const lista = r.results;
   if (tipo !== "evento" || !lista.length) return lista;
-  const ops = await env.DB.prepare(
-    "SELECT o.id, o.noticia_id, o.texto, (SELECT COUNT(*) FROM votos v WHERE v.opcion_id = o.id) AS votos FROM opciones o JOIN noticias n ON n.id = o.noticia_id WHERE n.tipo = 'evento' ORDER BY o.orden, o.id"
-  ).all();
-  const mios = u ? (await env.DB.prepare("SELECT noticia_id, opcion_id FROM votos WHERE usuario_id = ?1").bind(u.id).all()).results : [];
+  const ops = (await env.DB.prepare(
+    "SELECT o.id, o.noticia_id, o.texto FROM opciones o JOIN noticias n ON n.id = o.noticia_id WHERE n.tipo = 'evento' ORDER BY o.orden, o.id"
+  ).all()).results;
+  const votos = (await env.DB.prepare(
+    "SELECT v.noticia_id, v.opcion_id, v.usuario_id, us.nombre FROM votos v LEFT JOIN usuarios us ON us.id = v.usuario_id"
+  ).all()).results;
+  const admin = u && u.rol === "admin";
   for (const n of lista) {
-    n.opciones = ops.results.filter(o => o.noticia_id === n.id).map(({ noticia_id, ...o }) => o);
-    const m = mios.find(v => v.noticia_id === n.id);
-    n.mi_voto = m ? m.opcion_id : null;
+    // Quién votó: visible para todos si no es anónima; en las anónimas, solo para los administradores.
+    const verNombres = !n.anonima || admin;
+    n.opciones = ops.filter(o => o.noticia_id === n.id).map(o => {
+      const vs = votos.filter(v => v.opcion_id === o.id);
+      return { id: o.id, texto: o.texto, votos: vs.length, ...(verNombres ? { votantes: vs.map(v => v.nombre || "?") } : {}) };
+    });
+    n.mis_votos = u ? votos.filter(v => v.noticia_id === n.id && v.usuario_id === u.id).map(v => v.opcion_id) : [];
   }
   return lista;
 }
@@ -187,15 +196,23 @@ async function guardarOpciones(env, id, textos) {
   if (cambios.length) await env.DB.batch(cambios);
 }
 
+// Pulsar una opción: si ya la tenías votada, se quita; si no, se vota
+// (en las de una sola respuesta, sustituye al voto anterior).
 async function votar(env, u, d) {
-  const n = await env.DB.prepare("SELECT id, votacion_cerrada FROM noticias WHERE id = ?1 AND tipo = 'evento'").bind(Number(d.noticia_id)).first();
+  const n = await env.DB.prepare("SELECT id, fecha, multiple FROM noticias WHERE id = ?1 AND tipo = 'evento'").bind(Number(d.noticia_id)).first();
   if (!n) return [404, { error: "No existe" }];
-  if (n.votacion_cerrada) return [400, { error: "La votación está cerrada" }];
+  if (n.fecha && n.fecha < hoyMadrid()) return [400, { error: "El evento ya pasó: no se puede votar" }];
   const o = await env.DB.prepare("SELECT id FROM opciones WHERE id = ?1 AND noticia_id = ?2").bind(Number(d.opcion_id), n.id).first();
   if (!o) return [400, { error: "Opción no válida" }];
-  await env.DB.prepare(
-    "INSERT INTO votos (noticia_id, usuario_id, opcion_id) VALUES (?1, ?2, ?3) ON CONFLICT(noticia_id, usuario_id) DO UPDATE SET opcion_id = ?3"
-  ).bind(n.id, u.id, o.id).run();
+  const ya = await env.DB.prepare("SELECT 1 FROM votos WHERE noticia_id = ?1 AND usuario_id = ?2 AND opcion_id = ?3").bind(n.id, u.id, o.id).first();
+  if (ya) {
+    await env.DB.prepare("DELETE FROM votos WHERE noticia_id = ?1 AND usuario_id = ?2 AND opcion_id = ?3").bind(n.id, u.id, o.id).run();
+    return [200, { ok: true }];
+  }
+  const cambios = [];
+  if (!n.multiple) cambios.push(env.DB.prepare("DELETE FROM votos WHERE noticia_id = ?1 AND usuario_id = ?2").bind(n.id, u.id));
+  cambios.push(env.DB.prepare("INSERT INTO votos (noticia_id, usuario_id, opcion_id) VALUES (?1, ?2, ?3)").bind(n.id, u.id, o.id));
+  await env.DB.batch(cambios);
   return [200, { ok: true }];
 }
 
@@ -208,27 +225,27 @@ async function noticiaGuardar(env, u, d) {
   const fecha = String(d.fecha || "").trim();
   if (fecha && !fechaValida(fecha)) return [400, { error: "Fecha no válida" }];
   if (!fecha && tipo === "update") return [400, { error: "Falta la fecha" }];
-  const etiqueta = String(d.etiqueta || "").trim().slice(0, 30);
+  const etiqueta = tipo === "update" ? String(d.etiqueta || "").trim().slice(0, 30) : "";
   const texto = String(d.texto || "").trim().slice(0, 4000);
   const resumen = String(d.resumen || "").trim().slice(0, 300);
-  if (!resumen) return [400, { error: "Falta el resumen" }];
+  if (!resumen) return [400, { error: "Falta el texto de vista previa" }];
   if (tipo === "update" && !/^\d+\.\d+\.\d+$/.test(etiqueta)) return [400, { error: "La versión debe ser como 1.0.0" }];
   const opciones = tipo === "evento" && Array.isArray(d.opciones)
     ? [...new Set(d.opciones.map(t => String(t).trim().slice(0, 80)).filter(Boolean))].slice(0, 12) : [];
   if (opciones.length === 1) return [400, { error: "Una votación necesita al menos 2 opciones" }];
-  const cerrada = d.votacion_cerrada ? 1 : 0;
+  const ev = tipo === "evento";
+  const multiple = ev && d.multiple ? 1 : 0, anonima = ev && d.anonima ? 1 : 0, enInicio = ev && !fecha && d.en_inicio ? 1 : 0;
   if (d.id) {
     const r = await env.DB.prepare(
-      "UPDATE noticias SET titulo = ?1, fecha = ?2, etiqueta = ?3, texto = ?4, autor_id = ?5, resumen = ?8, actualizado = datetime('now') WHERE id = ?6 AND tipo = ?7"
-    ).bind(titulo, fecha || null, etiqueta, texto, u.id, Number(d.id), tipo, resumen).run();
+      "UPDATE noticias SET titulo = ?1, fecha = ?2, etiqueta = ?3, texto = ?4, autor_id = ?5, resumen = ?8, multiple = ?9, anonima = ?10, en_inicio = ?11, actualizado = datetime('now') WHERE id = ?6 AND tipo = ?7"
+    ).bind(titulo, fecha || null, etiqueta, texto, u.id, Number(d.id), tipo, resumen, multiple, anonima, enInicio).run();
     if (!r.meta.changes) return [404, { error: "No existe" }];
-    await env.DB.prepare("UPDATE noticias SET votacion_cerrada = ?1 WHERE id = ?2").bind(cerrada, Number(d.id)).run();
-    if (tipo === "evento") await guardarOpciones(env, Number(d.id), opciones);
+    if (ev) await guardarOpciones(env, Number(d.id), opciones);
     return [200, { id: Number(d.id) }];
   }
   const r = await env.DB.prepare(
-    "INSERT INTO noticias (tipo, titulo, fecha, etiqueta, texto, autor_id, resumen) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
-  ).bind(tipo, titulo, fecha || null, etiqueta, texto, u.id, resumen).run();
+    "INSERT INTO noticias (tipo, titulo, fecha, etiqueta, texto, autor_id, resumen, multiple, anonima, en_inicio) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
+  ).bind(tipo, titulo, fecha || null, etiqueta, texto, u.id, resumen, multiple, anonima, enInicio).run();
   const id = r.meta.last_row_id;
   if (opciones.length) await guardarOpciones(env, id, opciones);
   return [200, { id }];
