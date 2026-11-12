@@ -366,7 +366,10 @@ export default {
     try {
       // Foto de prueba del recibo: solo en local (wrangler dev).
       if (ruta === "/api/recibo-prueba" && new URL(req.url).hostname === "127.0.0.1") {
-        const png = await reciboPng({ numero: 42, tipo: "Vendo", objeto: "Pico de diamante", cantidad: 1, comprador: "Steve", vendedor: "Alex", precio: 150, fecha: Date.now() });
+        const png = await reciboPng({ numero: 1, tipo: "Vendo", comprador: "Steve", vendedor: "Alex", fecha: Date.now(), objetos: [
+          { nombre: "Pico de diamante", cantidad: 1, precio: 150, encantamientos: ["Eficiencia V", "Irrompibilidad III", "Fortuna III"] },
+          { nombre: "Manzana dorada", cantidad: 8, precio: 12 },
+          { nombre: "Libro encantado", cantidad: 2, precio: 75, encantamientos: ["Reparación"] }] });
         return new Response(png, { headers: { "Content-Type": "image/png" } });
       }
       if (ruta === "/api/yo" && req.method === "GET") {
