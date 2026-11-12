@@ -93,3 +93,7 @@ Apunta aquí lo que veas raro:
 **Con un amigo:**
 - [ ] En la anónima ve círculos grises y no le sale «Votaciones».
 - [ ] En una pública ve las caras y el botón «Votaciones».
+
+## Mercadillo, parte 1: recibo en imagen
+- Probado en local (`wrangler dev`): la API genera el PNG del recibo con datos inventados (ruta `/api/recibo-prueba`, solo responde en 127.0.0.1).
+- Sin probar: generarlo en el Worker publicado en Cloudflare (aún no desplegado; el paquete pesa 1,8 MB comprimido, por debajo del límite de 3 MB).

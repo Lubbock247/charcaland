@@ -1,1 +1,1 @@
-{"name":"charcaland-api","private":true,"devDependencies":{"wrangler":"^4.160.0"}}
+{"name":"charcaland-api","private":true,"devDependencies":{"wrangler":"^4.160.0"},"dependencies":{"@resvg/resvg-wasm":"^2.6.2","satori":"^0.63.2","satori-html":"^0.3.2"}}

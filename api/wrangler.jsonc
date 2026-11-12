@@ -1,6 +1,7 @@
 {
   "name": "charcaland-api",
   "main": "src/index.js",
+  "rules": [{ "type": "Data", "globs": ["**/*.ttf"] }],
   "compatibility_date": "2026-11-01",
   "d1_databases": [
     { "binding": "DB", "database_name": "charcaland", "database_id": "836ab4a7-7987-4714-bb41-13df12d398cb" }

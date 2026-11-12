@@ -1,4 +1,5 @@
 // API de Charcaland: cuentas con Discord, roles y saldo.
+import { reciboPng } from "./recibo.js";
 // Cada petición lleva el token de Discord del usuario; aquí se comprueba
 // con Discord que es válido y que se creó para ESTA aplicación.
 
@@ -363,6 +364,11 @@ export default {
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cab });
     const ruta = new URL(req.url).pathname;
     try {
+      // Foto de prueba del recibo: solo en local (wrangler dev).
+      if (ruta === "/api/recibo-prueba" && new URL(req.url).hostname === "127.0.0.1") {
+        const png = await reciboPng({ numero: 42, tipo: "Vendo", objeto: "Pico de diamante", cantidad: 1, comprador: "Steve", vendedor: "Alex", precio: 150, fecha: Date.now() });
+        return new Response(png, { headers: { "Content-Type": "image/png" } });
+      }
       if (ruta === "/api/yo" && req.method === "GET") {
         const u = await usuarioDe(req, env);
         return u ? json(u, 200, cab) : json({ error: "No has iniciado sesión" }, 401, cab);
@@ -418,6 +424,7 @@ export default {
       }
       return json({ error: "No existe" }, 404, cab);
     } catch (e) {
+      console.error(e);
       return json({ error: "Error del servidor" }, 500, cab);
     }
   },
