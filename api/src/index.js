@@ -153,11 +153,50 @@ async function wikiBorrar(env, u, id) {
 const TIPOS_NOTICIA = { eventos: "evento", updates: "update" };
 const fechaValida = f => /^\d{4}-\d{2}-\d{2}$/.test(f) && !isNaN(Date.parse(f));
 
-async function noticiasListar(env, tipo) {
+async function noticiasListar(env, tipo, u) {
   const r = await env.DB.prepare(
     "SELECT id, tipo, titulo, fecha, etiqueta, resumen, texto, cierre_votacion, votacion_cerrada FROM noticias WHERE tipo = ?1 ORDER BY fecha IS NULL, fecha DESC, id DESC"
   ).bind(tipo).all();
-  return r.results;
+  const lista = r.results;
+  if (tipo !== "evento" || !lista.length) return lista;
+  const ops = await env.DB.prepare(
+    "SELECT o.id, o.noticia_id, o.texto, (SELECT COUNT(*) FROM votos v WHERE v.opcion_id = o.id) AS votos FROM opciones o JOIN noticias n ON n.id = o.noticia_id WHERE n.tipo = 'evento' ORDER BY o.orden, o.id"
+  ).all();
+  const mios = u ? (await env.DB.prepare("SELECT noticia_id, opcion_id FROM votos WHERE usuario_id = ?1").bind(u.id).all()).results : [];
+  for (const n of lista) {
+    n.opciones = ops.results.filter(o => o.noticia_id === n.id).map(({ noticia_id, ...o }) => o);
+    const m = mios.find(v => v.noticia_id === n.id);
+    n.mi_voto = m ? m.opcion_id : null;
+  }
+  return lista;
+}
+
+// Las opciones se cambian conservando los votos de las que siguen igual.
+async function guardarOpciones(env, id, textos) {
+  const viejas = (await env.DB.prepare("SELECT id, texto FROM opciones WHERE noticia_id = ?1").bind(id).all()).results;
+  const cambios = [];
+  for (const o of viejas) if (!textos.includes(o.texto)) {
+    cambios.push(env.DB.prepare("DELETE FROM votos WHERE opcion_id = ?1").bind(o.id));
+    cambios.push(env.DB.prepare("DELETE FROM opciones WHERE id = ?1").bind(o.id));
+  }
+  textos.forEach((t, i) => {
+    const v = viejas.find(o => o.texto === t);
+    cambios.push(v ? env.DB.prepare("UPDATE opciones SET orden = ?1 WHERE id = ?2").bind(i, v.id)
+                   : env.DB.prepare("INSERT INTO opciones (noticia_id, texto, orden) VALUES (?1, ?2, ?3)").bind(id, t, i));
+  });
+  if (cambios.length) await env.DB.batch(cambios);
+}
+
+async function votar(env, u, d) {
+  const n = await env.DB.prepare("SELECT id, votacion_cerrada FROM noticias WHERE id = ?1 AND tipo = 'evento'").bind(Number(d.noticia_id)).first();
+  if (!n) return [404, { error: "No existe" }];
+  if (n.votacion_cerrada) return [400, { error: "La votación está cerrada" }];
+  const o = await env.DB.prepare("SELECT id FROM opciones WHERE id = ?1 AND noticia_id = ?2").bind(Number(d.opcion_id), n.id).first();
+  if (!o) return [400, { error: "Opción no válida" }];
+  await env.DB.prepare(
+    "INSERT INTO votos (noticia_id, usuario_id, opcion_id) VALUES (?1, ?2, ?3) ON CONFLICT(noticia_id, usuario_id) DO UPDATE SET opcion_id = ?3"
+  ).bind(n.id, u.id, o.id).run();
+  return [200, { ok: true }];
 }
 
 async function noticiaGuardar(env, u, d) {
@@ -173,22 +212,35 @@ async function noticiaGuardar(env, u, d) {
   const texto = String(d.texto || "").trim().slice(0, 4000);
   const resumen = String(d.resumen || "").trim().slice(0, 300);
   if (!resumen) return [400, { error: "Falta el resumen" }];
+  if (tipo === "update" && !/^\d+\.\d+\.\d+$/.test(etiqueta)) return [400, { error: "La versión debe ser como 1.0.0" }];
+  const opciones = tipo === "evento" && Array.isArray(d.opciones)
+    ? [...new Set(d.opciones.map(t => String(t).trim().slice(0, 80)).filter(Boolean))].slice(0, 12) : [];
+  if (opciones.length === 1) return [400, { error: "Una votación necesita al menos 2 opciones" }];
+  const cerrada = d.votacion_cerrada ? 1 : 0;
   if (d.id) {
     const r = await env.DB.prepare(
       "UPDATE noticias SET titulo = ?1, fecha = ?2, etiqueta = ?3, texto = ?4, autor_id = ?5, resumen = ?8, actualizado = datetime('now') WHERE id = ?6 AND tipo = ?7"
     ).bind(titulo, fecha || null, etiqueta, texto, u.id, Number(d.id), tipo, resumen).run();
     if (!r.meta.changes) return [404, { error: "No existe" }];
+    await env.DB.prepare("UPDATE noticias SET votacion_cerrada = ?1 WHERE id = ?2").bind(cerrada, Number(d.id)).run();
+    if (tipo === "evento") await guardarOpciones(env, Number(d.id), opciones);
     return [200, { id: Number(d.id) }];
   }
   const r = await env.DB.prepare(
     "INSERT INTO noticias (tipo, titulo, fecha, etiqueta, texto, autor_id, resumen) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"
   ).bind(tipo, titulo, fecha || null, etiqueta, texto, u.id, resumen).run();
-  return [200, { id: r.meta.last_row_id }];
+  const id = r.meta.last_row_id;
+  if (opciones.length) await guardarOpciones(env, id, opciones);
+  return [200, { id }];
 }
 
 async function noticiaBorrar(env, u, id) {
   if (u.rol !== "admin") return [403, { error: "Solo los administradores pueden hacer esto" }];
-  const r = await env.DB.prepare("DELETE FROM noticias WHERE id = ?1").bind(Number(id)).run();
+  const [, , r] = await env.DB.batch([
+    env.DB.prepare("DELETE FROM votos WHERE noticia_id = ?1").bind(Number(id)),
+    env.DB.prepare("DELETE FROM opciones WHERE noticia_id = ?1").bind(Number(id)),
+    env.DB.prepare("DELETE FROM noticias WHERE id = ?1").bind(Number(id)),
+  ]);
   return r.meta.changes ? [200, { ok: true }] : [404, { error: "No existe" }];
 }
 
@@ -244,7 +296,16 @@ export default {
         return json(cuerpo, est, cab);
       }
       const n = ruta.match(/^\/api\/noticias\/(eventos|updates)$/);
-      if (n && req.method === "GET") return json(await noticiasListar(env, TIPOS_NOTICIA[n[1]]), 200, cab);
+      if (n && req.method === "GET") {
+        const u = req.headers.get("Authorization") ? await usuarioDe(req, env) : null;
+        return json(await noticiasListar(env, TIPOS_NOTICIA[n[1]], u && !u.fuera ? u : null), 200, cab);
+      }
+      if (ruta === "/api/votar" && req.method === "POST") {
+        const [u, error] = await miembroDe(req, env, cab);
+        if (error) return error;
+        const [est, cuerpo] = await votar(env, u, await req.json());
+        return json(cuerpo, est, cab);
+      }
       if (ruta === "/api/noticias" && req.method === "POST") {
         const [u, error] = await miembroDe(req, env, cab);
         if (error) return error;

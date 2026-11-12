@@ -259,3 +259,18 @@ body.en-wiki main.ancha > h1, body.en-wiki main.ancha > .sub { display: none; }
 .resumen-noticia { font-weight: 600; color: var(--texto) !important; margin: 14px 0 !important; }
 .noticia-completa .texto-noticia { white-space: pre-wrap; line-height: 1.6; }
 textarea.corto { min-height: 70px; }
+.etiqueta.votacion { background: #d9a43a; color: #1a1205; }
+.ayuda { color: var(--suave); font-size: .85rem; margin: 4px 0 0; }
+label.casilla { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+label.casilla input { width: auto; }
+#previaNoticia .tarjeta { margin-top: 4px; }
+.votacion-caja { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--borde); }
+.votacion-caja h3 { margin: 0 0 10px; }
+.opcion-voto { position: relative; display: flex; justify-content: space-between; gap: 10px; width: 100%; margin: 0 0 8px; padding: 10px 14px; border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo); color: var(--texto); font: inherit; text-align: left; overflow: hidden; }
+button.opcion-voto { cursor: pointer; }
+button.opcion-voto:hover { border-color: var(--acento); }
+.opcion-voto.mia { border-color: var(--acento); }
+.opcion-voto.ganadora { border-color: #d9a43a; }
+.barra-voto { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(90, 209, 106, .18); }
+.txt-voto, .num-voto { position: relative; }
+.num-voto { color: var(--suave); white-space: nowrap; }

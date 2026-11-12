@@ -113,37 +113,97 @@ function estadoEvento(n) {
   if (!n.fecha) return ["Planificado", ""];
   return n.fecha < hoyMadrid() ? ["Terminado", "gris"] : ["Próximo", "verde"];
 }
+const esVotacion = n => n.opciones && n.opciones.length > 1;
+const votacionAbierta = n => esVotacion(n) && !n.votacion_cerrada;
+// Título como se muestra: en updates, "1.0.0 - Nombre"
+const tituloNoticia = n => n.tipo === "update" && n.etiqueta ? `${n.etiqueta} - ${n.titulo}` : n.titulo;
+function etiquetasNoticia(n) {
+  if (n.tipo === "update") return "";
+  const [txt, color] = estadoEvento(n);
+  return `<span class="etiqueta ${color}">${txt}</span>` +
+    (esVotacion(n) ? ` <span class="etiqueta votacion">${n.votacion_cerrada ? "Votación cerrada" : "Votación"}</span>` : "") +
+    (n.etiqueta ? ` <span class="etiqueta">${esc(n.etiqueta)}</span>` : "");
+}
+const fechaNoticia = n => n.fecha ? fechaBonita(n.fecha) : "Fecha por decidir";
+const esPasado = n => n.tipo === "evento" && n.fecha && n.fecha < hoyMadrid();
+function tarjetaNoticia(n, enlace) {
+  return `<${enlace ? `a href="${enlace}"` : "div"} class="tarjeta ${esPasado(n) ? "pasado" : ""}">${etiquetasNoticia(n)}
+    <h3>${esc(tituloNoticia(n))}</h3><div class="fecha">${fechaNoticia(n)}</div><p>${esc(n.resumen)}</p>
+    <span class="leer-mas">Leer más →</span></${enlace ? "a" : "div"}>`;
+}
+// Versión siguiente a la más alta (1.0.0 si no hay ninguna)
+function siguienteVersion(items) {
+  const vs = items.map(x => (x.etiqueta || "").split(".").map(Number)).filter(v => v.length === 3 && !v.some(isNaN));
+  if (!vs.length) return "1.0.0";
+  vs.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
+  const [M, m, p] = vs[vs.length - 1];
+  return `${M}.${m}.${p + 1}`;
+}
 
-// Ventana para crear o editar un evento o una update (solo administradores).
-function editorNoticia(tipo, n, alGuardar) {
+// Ventana para crear o editar un evento o una update (solo administradores), con vista previa.
+function editorNoticia(tipo, n, items, alGuardar) {
   const ev = tipo === "evento";
   const fondo = document.createElement("div");
   fondo.className = "fondo-fuera";
   fondo.innerHTML = `<form class="aviso-fuera editor-noticia">
     <h2>${n ? "Editar" : ev ? "Nuevo" : "Nueva"} ${ev ? "evento" : "update"}</h2>
+    ${ev ? "" : `<label>Versión</label><input name="etiqueta" required pattern="\\d+\\.\\d+\\.\\d+" placeholder="1.0.0" value="${esc(n ? n.etiqueta : siguienteVersion(items))}">`}
     <label>Título</label><input name="titulo" required maxlength="120" value="${esc(n ? n.titulo : "")}">
-    <label>Fecha${ev ? " (déjala vacía si aún no hay)" : ""}</label>
-    <input name="fecha" type="date" ${ev ? "" : "required"} value="${esc(n ? n.fecha || "" : ev ? "" : hoyMadrid())}">
-    <label>Etiqueta</label><input name="etiqueta" maxlength="30" placeholder="${ev ? "PvP, Construcción…" : "Mod, Web, Servidor…"}" value="${esc(n ? n.etiqueta : "")}">
-    <label>Resumen (lo que se ve en la lista)</label><textarea name="resumen" class="corto" maxlength="300" required>${esc(n ? n.resumen : "")}</textarea>
-    <label>Texto completo (al abrirla)</label><textarea name="texto" maxlength="4000">${esc(n ? n.texto : "")}</textarea>
+    <label>Fecha</label><input name="fecha" type="date" ${ev ? "" : "required"} value="${esc(n ? n.fecha || "" : ev ? "" : hoyMadrid())}">
+    ${ev ? `<p class="ayuda">Sin fecha, el evento sale como «Planificado».</p>
+    <label>Etiqueta</label><input name="etiqueta" maxlength="30" placeholder="PvP, Construcción…" value="${esc(n ? n.etiqueta : "")}">` : ""}
+    <label>Texto de vista previa</label><textarea name="resumen" class="corto" maxlength="300" required placeholder="Una o dos frases: lo que se ve en la lista.">${esc(n ? n.resumen : "")}</textarea>
+    <label>Texto completo</label><textarea name="texto" maxlength="4000" placeholder="Lo que se lee al abrirla.">${esc(n ? n.texto : "")}</textarea>
+    ${ev ? `<label>Opciones de votación</label>
+    <textarea name="opciones" class="corto" placeholder="Una por línea. Déjalo vacío si no hay votación.">${esc(n && n.opciones ? n.opciones.map(o => o.texto).join("\n") : "")}</textarea>
+    <label class="casilla"><input type="checkbox" name="votacion_cerrada" ${n && n.votacion_cerrada ? "checked" : ""}> Votación cerrada</label>` : ""}
+    <label>Así se verá</label><div id="previaNoticia"></div>
     <div class="aviso oculto" id="errNoticia"></div>
     <button type="submit">Guardar</button> <a class="btn g" href="#" id="cancelarNoticia">Cancelar</a>
   </form>`;
   document.body.appendChild(fondo);
   const f = fondo.querySelector("form");
+  const datos = () => {
+    const d = Object.fromEntries(new FormData(f));
+    d.opciones = (d.opciones || "").split("\n").map(t => t.trim()).filter(Boolean);
+    d.votacion_cerrada = !!d.votacion_cerrada;
+    return d;
+  };
+  const previa = () => {
+    const d = datos();
+    fondo.querySelector("#previaNoticia").innerHTML = tarjetaNoticia({ ...d, tipo,
+      titulo: d.titulo || "Título", resumen: d.resumen || "Texto de vista previa…",
+      opciones: d.opciones.map(t => ({ texto: t })), votacion_cerrada: d.votacion_cerrada ? 1 : 0 });
+  };
+  f.oninput = previa; previa();
   fondo.querySelector("#cancelarNoticia").onclick = e => { e.preventDefault(); fondo.remove(); };
   f.onsubmit = async e => {
     e.preventDefault();
-    const d = Object.fromEntries(new FormData(f));
     try {
-      await api("/api/noticias", { method: "POST", body: JSON.stringify({ ...d, tipo, id: n ? n.id : undefined }) });
+      await api("/api/noticias", { method: "POST", body: JSON.stringify({ ...datos(), tipo, id: n ? n.id : undefined }) });
       fondo.remove(); alGuardar();
     } catch (er) { const m = fondo.querySelector("#errNoticia"); m.textContent = er.message; m.classList.remove("oculto"); }
   };
 }
 
-// Página de Eventos o de Updates: tarjetas con resumen (con pestañas en eventos)
+// Votación dentro de la vista completa de un evento
+function htmlVotacion(n, u) {
+  const total = n.opciones.reduce((s, o) => s + o.votos, 0);
+  const puedeVotar = u && !n.votacion_cerrada;
+  const max = Math.max(...n.opciones.map(o => o.votos));
+  return `<div class="votacion-caja"><h3>${n.votacion_cerrada ? "Resultado de la votación" : "Votación"}</h3>
+    ${n.opciones.map(o => {
+      const pct = total ? Math.round(o.votos * 100 / total) : 0;
+      const mio = n.mi_voto === o.id, ganadora = n.votacion_cerrada && total && o.votos === max;
+      return `<${puedeVotar ? `button type="button" data-votar="${o.id}"` : "div"} class="opcion-voto ${mio ? "mia" : ""} ${ganadora ? "ganadora" : ""}">
+        <span class="barra-voto" style="width:${pct}%"></span>
+        <span class="txt-voto">${esc(o.texto)}${mio ? " · tu voto" : ""}</span><span class="num-voto">${o.votos} (${pct}%)</span>
+      </${puedeVotar ? "button" : "div"}>`; }).join("")}
+    <p class="ayuda">${total} voto${total === 1 ? "" : "s"}. ${n.votacion_cerrada ? "La votación está cerrada." :
+      u ? "Pulsa una opción para votar; puedes cambiar tu voto." : "Entra con Discord para votar."}</p></div>`;
+}
+
+// Página de Eventos o de Updates: tarjetas con vista previa (pestañas en eventos)
 // y, al pulsar una, el texto completo (dirección #ID).
 async function paginaNoticias(tipo) {
   const ev = tipo === "evento";
@@ -152,13 +212,6 @@ async function paginaNoticias(tipo) {
   if (!items) { caja.innerHTML = `<div class="vacio">No se pudieron cargar.</div>`; return; }
   const admin = u && u.rol === "admin";
   const recargar = () => paginaNoticias(tipo);
-  const etiqueta = n => {
-    if (!ev) return n.etiqueta ? `<span class="etiqueta">${esc(n.etiqueta)}</span>` : "";
-    const [txt, color] = estadoEvento(n);
-    return `<span class="etiqueta ${color}">${txt}</span>${n.etiqueta ? ` <span class="etiqueta">${esc(n.etiqueta)}</span>` : ""}`;
-  };
-  const fecha = n => n.fecha ? fechaBonita(n.fecha) : "Fecha por decidir";
-  const pasado = n => ev && n.fecha && n.fecha < hoyMadrid();
   const PESTANAS = [["inicio", "Inicio"], ["proximamente", "Próximamente"], ["pasados", "Pasados"]];
 
   function pintar() {
@@ -166,15 +219,19 @@ async function paginaNoticias(tipo) {
     const n = /^\d+$/.test(h) && items.find(x => x.id == h);
     if (n) {   // Vista de una sola, con el texto completo
       caja.innerHTML = `<a href="#" class="volver">← Volver</a>
-        <div class="tarjeta noticia-completa ${pasado(n) ? "pasado" : ""}">${etiqueta(n)}
-        <h2>${esc(n.titulo)}</h2><div class="fecha">${fecha(n)}</div>
+        <div class="tarjeta noticia-completa ${esPasado(n) ? "pasado" : ""}">${etiquetasNoticia(n)}
+        <h2>${esc(tituloNoticia(n))}</h2><div class="fecha">${fechaNoticia(n)}</div>
         <p class="resumen-noticia">${esc(n.resumen)}</p><div class="texto-noticia">${esc(n.texto)}</div>
+        ${esVotacion(n) ? htmlVotacion(n, u) : ""}
         ${admin ? `<div class="acciones-noticia"><a class="btn g" href="#" id="editarN">Editar</a><a class="btn g peligro" href="#" id="borrarN">Borrar</a></div>` : ""}</div>`;
       caja.querySelector(".volver").onclick = e => { e.preventDefault(); history.length > 1 ? history.back() : (location.hash = ""); };
+      caja.querySelectorAll("[data-votar]").forEach(b => b.onclick = async () => {
+        try { await api("/api/votar", { method: "POST", body: JSON.stringify({ noticia_id: n.id, opcion_id: Number(b.dataset.votar) }) }); recargar(); }
+        catch (er) { alert(er.message); } });
       if (admin) {
-        document.getElementById("editarN").onclick = e => { e.preventDefault(); editorNoticia(tipo, n, recargar); };
+        document.getElementById("editarN").onclick = e => { e.preventDefault(); editorNoticia(tipo, n, items, recargar); };
         document.getElementById("borrarN").onclick = async e => { e.preventDefault();
-          if (!confirm(`¿Borrar «${n.titulo}»? No se puede deshacer.`)) return;
+          if (!confirm(`¿Borrar «${tituloNoticia(n)}»? No se puede deshacer.`)) return;
           try { await api("/api/noticias/" + n.id, { method: "DELETE" }); location.hash = ""; recargar(); } catch (er) { alert(er.message); } };
       }
       return;
@@ -184,19 +241,20 @@ async function paginaNoticias(tipo) {
       const sel = PESTANAS.some(p => p[0] === h) ? h : "inicio";
       const hoy = hoyMadrid();
       const conFecha = items.filter(x => x.fecha && x.fecha >= hoy).sort((a, b) => a.fecha < b.fecha ? -1 : 1);
-      if (sel === "inicio") { lista = conFecha.slice(0, 3); vacio = "No hay eventos próximos con fecha."; }
-      if (sel === "proximamente") lista = [...conFecha, ...items.filter(x => !x.fecha)];
-      if (sel === "pasados") lista = items.filter(pasado);
+      const sinFecha = items.filter(x => !x.fecha);
+      if (sel === "inicio") {
+        const cerca = conFecha.slice(0, 3);
+        lista = [...cerca, ...items.filter(x => votacionAbierta(x) && !esPasado(x) && !cerca.includes(x))];
+        vacio = "No hay eventos próximos ni votaciones abiertas.";
+      }
+      if (sel === "proximamente") lista = [...conFecha, ...sinFecha];
+      if (sel === "pasados") lista = items.filter(esPasado);
       pestanas = `<div class="wtabs pestanas-eventos">${PESTANAS.map(([id, t]) =>
         `<a href="#${id}" class="${id === sel ? "sel" : ""}">${t}</a>`).join("")}</div>`;
     }
     caja.innerHTML = pestanas + (admin ? `<div><a class="btn" href="#" id="nuevaNoticia">+ ${ev ? "Nuevo evento" : "Nueva update"}</a></div>` : "") +
-      (lista.length ? lista.map(n =>
-        `<a class="tarjeta ${pasado(n) ? "pasado" : ""}" href="#${n.id}">${etiqueta(n)}
-         <h3>${esc(n.titulo)}</h3><div class="fecha">${fecha(n)}</div><p>${esc(n.resumen)}</p>
-         <span class="leer-mas">Leer más →</span></a>`).join("")
-        : `<div class="vacio">${vacio}</div>`);
-    if (admin) document.getElementById("nuevaNoticia").onclick = e => { e.preventDefault(); editorNoticia(tipo, null, recargar); };
+      (lista.length ? lista.map(n => tarjetaNoticia(n, "#" + n.id)).join("") : `<div class="vacio">${vacio}</div>`);
+    if (admin) document.getElementById("nuevaNoticia").onclick = e => { e.preventDefault(); editorNoticia(tipo, null, items, recargar); };
   }
   window.onhashchange = () => { pintar(); scrollTo(0, 0); };
   pintar();
@@ -225,7 +283,7 @@ const render = {
     document.getElementById("evento").innerHTML =
       (e ? `<a class="tarjeta" href="eventos.html#${e.id}"><span class="etiqueta verde">Próximo</span><h3>${esc(e.titulo)}</h3><p>${fechaBonita(e.fecha)}</p></a>`
          : `<a class="tarjeta" href="eventos.html#proximamente"><div class="icono">◆</div><h3>Eventos</h3><p>No hay eventos próximos con fecha</p></a>`) +
-      `<a class="tarjeta" href="updates.html${u ? "#" + u.id : ""}"><div class="icono">◆</div><h3>Última update</h3><p>${esc(u ? u.titulo : "Aún no hay updates")}</p></a>
+      `<a class="tarjeta" href="updates.html${u ? "#" + u.id : ""}"><div class="icono">◆</div><h3>Última update</h3><p>${esc(u ? tituloNoticia(u) : "Aún no hay updates")}</p></a>
        <a class="tarjeta" href="mercadillo.html"><div class="icono">◆</div><h3>Mercadillo</h3><p>Próximamente</p></a>`;
     const yo = await SESION;
     if (yo) document.getElementById("btnEntrar").classList.add("oculto");

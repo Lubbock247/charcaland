@@ -55,3 +55,17 @@ Apunta aquí lo que veas raro:
 - [ ] Creas uno con fecha pasada: sale en Pasados, en gris.
 - [ ] Pulsas una tarjeta (evento o update): se abre con el texto completo; «← Volver» regresa.
 - [ ] Editar y borrar desde la vista completa.
+
+## Versiones, vista previa y votaciones (12/11/2026)
+
+**Ya comprobado por Claude** (con datos inventados, sin guardar): el formulario sin paréntesis, con «Así se verá»; la versión propuesta es 1.0.0 y el título sale «1.0.0 - Nombre»; la votación se ve con barras y «tu voto». Las updates de ejemplo están borradas.
+
+**Contigo (admin):**
+- [ ] Creas la update 1.0.0; la siguiente te propone 1.0.1.
+- [ ] Creas un evento con opciones (una por línea): sale «Votación» y aparece en la pestaña Inicio.
+- [ ] Votas, cambias el voto y se actualiza.
+- [ ] Marcas «Votación cerrada» al editar: ya no se puede votar y se resalta la ganadora.
+- [ ] Si quitas una opción al editar, se pierden solo los votos de esa opción.
+
+**Con un amigo:**
+- [ ] Puede votar, pero no ve los botones de admin.

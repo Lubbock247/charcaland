@@ -38,3 +38,17 @@ CREATE TABLE IF NOT EXISTS noticias (
   autor_id TEXT,
   actualizado TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS opciones (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  noticia_id INTEGER NOT NULL,
+  texto TEXT NOT NULL,
+  orden INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS votos (
+  noticia_id INTEGER NOT NULL,
+  usuario_id TEXT NOT NULL,
+  opcion_id INTEGER NOT NULL,
+  PRIMARY KEY (noticia_id, usuario_id)
+);
