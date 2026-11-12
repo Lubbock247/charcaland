@@ -157,3 +157,78 @@ main.ancha { max-width: 1200px; }
 .tarjeta.nuevawiki { display: flex; align-items: center; justify-content: center; color: var(--acento); border-style: dashed; min-height: 120px; }
 .ayuda { margin: 12px 0; color: var(--suave); font-size: .88rem; }
 .ayuda summary { cursor: pointer; color: var(--texto); }
+
+/* ===== Wiki estilo juego (v2) ===== */
+.hub { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; }
+.cuadro { aspect-ratio: 1; background: var(--panel); border: 1px solid var(--borde); border-radius: 18px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 14px;
+  text-align: center; color: var(--texto); text-decoration: none; font-weight: 700; font-size: 1.05rem; transition: .15s; }
+.cuadro i { font-size: 2.6rem; color: var(--acento); }
+.cuadro:hover { border-color: var(--acento); transform: translateY(-3px); }
+.cuadro.nuevo { border: 2px dashed var(--borde); color: var(--acento); font-weight: 600; }
+.wiki2 .wban { background: #141824; border: 1px solid var(--borde); border-bottom: 0; border-radius: 14px 14px 0 0; padding: 18px 22px 0; }
+.wnombre { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.wnombre i { color: var(--acento); }
+.wtabs { display: flex; gap: 4px; margin-top: 14px; overflow-x: auto; }
+.wtabs a { padding: 9px 16px; border-radius: 10px 10px 0 0; color: var(--suave); text-decoration: none; white-space: nowrap; font-weight: 600; border: 1px solid transparent; border-bottom: 0; }
+.wtabs a:hover { color: var(--texto); background: var(--panel2); }
+.wtabs a.sel { background: var(--fondo); color: var(--texto); border-color: var(--borde); }
+.wtabs a.mas { color: var(--acento); }
+.wcuerpo { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 20px; align-items: start;
+  border: 1px solid var(--borde); border-radius: 0 0 14px 14px; padding: 20px; background: var(--fondo); }
+.wiki2 > .wcuerpo:first-child { border-radius: 14px; }
+.wcuerpo.solo { grid-template-columns: minmax(0, 1fr); }
+.wmenu { position: sticky; top: 80px; display: flex; flex-direction: column; gap: 2px; }
+.wmenu a { padding: 8px 12px; border-radius: 8px; color: var(--texto); text-decoration: none; font-size: .95rem; }
+.wmenu a:hover { background: var(--panel2); }
+.wmenu a.sel { background: var(--acento); color: #0d1a10; font-weight: 700; }
+.wmenu a.mas { color: var(--acento); margin-top: 6px; }
+.wmenu .quien { color: var(--suave); font-size: .78rem; padding: 0 12px 6px; }
+.wiki2 .pagina { background: transparent; border: 0; padding: 0 4px; min-height: 0; }
+.wiki2 .pagina h3 { border: 0; padding-left: 12px; border-left: 4px solid var(--acento); font-size: 1.35rem; margin: 1.6em 0 .6em; clear: both; }
+.wiki2 .pagina h4 { font-size: 1.12rem; margin: 1.3em 0 .4em; color: #cfd6e6; }
+.wiki2 .pagina h2.wtitulo { border-bottom: 0; padding: 0; font-size: 2rem; }
+.caja .cajat { background: #2b2150; color: #d6c9ff; }
+.cajai { background: #242a3a; display: flex; justify-content: center; }
+.cajai img { max-width: 100%; display: block; border-radius: 0; }
+.habs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 12px 0; clear: both; }
+.hab { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 12px 14px; }
+.hab .nivel { display: inline-block; font-size: .72rem; font-weight: 700; background: #17361e; color: #7fe08c; border-radius: 99px; padding: 2px 10px; }
+.hab strong { display: block; margin: 6px 0 2px; font-size: 1.02rem; }
+.hab p { margin: 0; color: var(--suave); font-size: .9rem; }
+.accesos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.accesos a { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 14px; text-decoration: none; color: var(--texto); display: flex; flex-direction: column; gap: 4px; }
+.accesos a:hover { border-color: var(--acento); }
+.accesos span { color: var(--suave); font-size: .85rem; }
+.acciones .btn { padding: 7px 12px; font-size: .9rem; }
+.btn i { vertical-align: -2px; }
+/* Editor */
+.editor { background: transparent; border: 0; padding: 0; }
+.barraed { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; background: var(--panel); border: 1px solid var(--borde); border-bottom: 0; border-radius: 10px 10px 0 0; }
+.barraed button { margin: 0; background: var(--panel2); color: var(--texto); font-weight: 600; font-size: .85rem; padding: 7px 10px; border-radius: 7px; display: flex; align-items: center; gap: 5px; }
+.barraed button:hover { background: #343b4d; filter: none; }
+.dosed { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--borde); border-radius: 0 0 10px 10px; overflow: hidden; }
+.dosed textarea { border: 0; border-radius: 0; min-height: 420px; font-family: Consolas, monospace; font-size: .9rem; resize: vertical; border-right: 1px solid var(--borde); }
+.vistaed { padding: 12px 16px; max-height: 620px; overflow-y: auto; background: var(--panel); }
+.pagina-vista h3 { padding-left: 12px; border-left: 4px solid var(--acento); font-size: 1.25rem; clear: both; }
+.pagina-vista img { max-width: 100%; }
+.elegir { background: var(--panel); border: 1px solid var(--acento); border-radius: 10px; padding: 10px; margin: 6px 0; }
+.elegir #listaPag { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 180px; overflow-y: auto; }
+.elegir button { margin: 0; background: var(--panel2); color: var(--texto); font-weight: 500; font-size: .88rem; padding: 6px 10px; }
+.iconos { display: flex; flex-wrap: wrap; gap: 6px; }
+.iconos .ico { margin: 0; cursor: pointer; }
+.iconos input { display: none; }
+.iconos i { display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; font-size: 1.4rem; border: 1px solid var(--borde); border-radius: 10px; background: var(--panel); }
+.iconos input:checked + i { border-color: var(--acento); color: var(--acento); background: #17361e; }
+.mas-opc { margin-top: 12px; color: var(--suave); }
+.mas-opc summary { cursor: pointer; }
+@media (max-width: 800px) {
+  .wcuerpo { grid-template-columns: 1fr; padding: 14px; }
+  .wmenu { position: static; }
+  .dosed { grid-template-columns: 1fr; }
+  .dosed textarea { border-right: 0; border-bottom: 1px solid var(--borde); min-height: 260px; }
+  .caja { float: none; width: auto; margin: 0 0 14px; }
+}
+
+/* Dentro de una wiki se oculta el título grande de la página */
+body.en-wiki main.ancha > h1, body.en-wiki main.ancha > .sub { display: none; }

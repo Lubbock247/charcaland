@@ -19,3 +19,5 @@ CREATE TABLE IF NOT EXISTS paginas (
   actualizado TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (seccion, slug)
 );
+
+ALTER TABLE paginas ADD COLUMN icono TEXT;

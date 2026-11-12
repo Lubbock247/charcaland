@@ -68,7 +68,7 @@ const render = {
       `<div class="tarjeta"><span class="etiqueta">${esc(u.etiqueta)}</span>
        <h3>${esc(u.titulo)}</h3><div class="fecha">${fechaBonita(u.fecha)}</div><p>${esc(u.texto)}</p></div>`).join("");
   },
-  mods() { iniciarWiki("mods"); },
+  mods() { if (location.hash.length > 1) document.body.classList.add("en-wiki"); iniciarWiki("mods"); },
   eventos() {
     document.getElementById("lista").innerHTML = EVENTOS.map(e =>
       `<div class="tarjeta"><span class="etiqueta ${e.estado === "Próximo" ? "verde" : "gris"}">${esc(e.estado)}</span>

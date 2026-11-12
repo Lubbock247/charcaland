@@ -52,7 +52,7 @@ function puede(u, seccion, categoria, pagina) {
 
 async function wikiListar(env, seccion) {
   const r = await env.DB.prepare(
-    `SELECT p.id, p.seccion, p.categoria, p.slug, p.titulo, p.padre_id, p.orden, p.autor_id, substr(p.contenido, 1, 400) AS resumen, u.nombre AS autor
+    `SELECT p.id, p.seccion, p.categoria, p.slug, p.titulo, p.padre_id, p.orden, p.autor_id, p.icono, length(p.contenido) AS largo, u.nombre AS autor
      FROM paginas p LEFT JOIN usuarios u ON u.id = p.autor_id WHERE p.seccion = ?1 ORDER BY p.orden, p.titulo`
   ).bind(seccion).all();
   return r.results;
@@ -82,11 +82,20 @@ async function wikiGuardar(env, u, d) {
   let padre = existente ? existente.padre_id : null;
   if (esAdmin && "padre_id" in d) padre = d.padre_id ? Number(d.padre_id) : null;
   if (existente && padre === existente.id) padre = null;
+  // La página de arriba debe existir y no puede estar dentro de esta misma (evita círculos)
+  for (let id = padre, pasos = 0; id !== null; pasos++) {
+    const p = await env.DB.prepare("SELECT seccion, padre_id FROM paginas WHERE id = ?1").bind(id).first();
+    if (!p || p.seccion !== seccion || pasos > 20) return [400, { error: "La página de arriba no es válida" }];
+    if (existente && id === existente.id) return [400, { error: "No se puede meter una página dentro de sí misma" }];
+    id = p.padre_id;
+  }
   const orden = esAdmin && Number.isFinite(Number(d.orden)) ? Number(d.orden) : (existente ? existente.orden : 0);
+  const icono = esAdmin && typeof d.icono === "string" && /^[a-z0-9-]{1,40}$/.test(d.icono)
+    ? d.icono : (existente ? existente.icono : null);
   if (existente) {
     await env.DB.prepare(
-      "UPDATE paginas SET titulo = ?1, contenido = ?2, padre_id = ?3, orden = ?4, actualizado = datetime('now') WHERE id = ?5"
-    ).bind(titulo, contenido, padre, orden, existente.id).run();
+      "UPDATE paginas SET titulo = ?1, contenido = ?2, padre_id = ?3, orden = ?4, icono = ?5, actualizado = datetime('now') WHERE id = ?6"
+    ).bind(titulo, contenido, padre, orden, icono, existente.id).run();
     return [200, { slug: existente.slug }];
   }
   let slug = slugDe(titulo), n = 1;
@@ -94,15 +103,16 @@ async function wikiGuardar(env, u, d) {
     n++; slug = slugDe(titulo) + "-" + n;
   }
   await env.DB.prepare(
-    "INSERT INTO paginas (seccion, categoria, slug, titulo, contenido, padre_id, orden, autor_id) VALUES (?1,?2,?3,?4,?5,?6,?7,?8)"
-  ).bind(seccion, categoria, slug, titulo, contenido, padre, orden, u.id).run();
+    "INSERT INTO paginas (seccion, categoria, slug, titulo, contenido, padre_id, orden, autor_id, icono) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)"
+  ).bind(seccion, categoria, slug, titulo, contenido, padre, orden, u.id, icono).run();
   return [201, { slug }];
 }
 async function wikiBorrar(env, u, id) {
   const p = await env.DB.prepare("SELECT * FROM paginas WHERE id = ?1").bind(Number(id)).first();
   if (!p) return [404, { error: "No existe esa página" }];
   if (!puede(u, p.seccion, p.categoria, p)) return [403, { error: "No tienes permiso" }];
-  await env.DB.prepare("UPDATE paginas SET padre_id = ?1 WHERE padre_id = ?2").bind(p.padre_id, p.id).run();
+  if (await env.DB.prepare("SELECT 1 FROM paginas WHERE padre_id = ?1").bind(p.id).first())
+    return [400, { error: "Tiene páginas dentro. Bórralas o muévelas antes." }];
   await env.DB.prepare("DELETE FROM paginas WHERE id = ?1").bind(p.id).run();
   return [200, { ok: true }];
 }
