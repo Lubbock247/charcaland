@@ -294,3 +294,19 @@ button.opcion-voto:hover { border-color: var(--acento); }
 .interruptor input:checked + .pista::after { left: 20px; background: #0d1a10; }
 .interruptor input:focus-visible + .pista { outline: 2px solid var(--acento); outline-offset: 2px; }
 .interruptor small { display: block; color: var(--suave); font-size: .8rem; }
+/* Votación: casillas, caras y lista de votantes */
+.votacion-caja.multiple .marca-voto { border-radius: 5px; }
+.caras { position: relative; display: flex; align-items: center; flex: none; }
+.caras img, .caras > span { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--panel); margin-left: -6px; background: #4a5163; object-fit: cover; }
+.caras .mas-caras { width: auto; min-width: 22px; padding: 0 5px; border-radius: 99px; background: var(--panel2); color: var(--suave); font-size: .7rem; display: flex; align-items: center; justify-content: center; }
+.num-voto { min-width: 40px; text-align: right; }
+.votacion-pie { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; }
+.ver-votos { margin: 0 !important; padding: 6px 14px !important; font: inherit; font-size: .9rem; cursor: pointer; }
+.barra-noticia { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 14px; }
+.barra-noticia .btn { margin: 0 0 0 6px; padding: 6px 14px; }
+.barra-noticia .volver { margin: 0 !important; padding: 6px 14px !important; }
+.lista-votos { text-align: left; max-height: 85vh; overflow-y: auto; }
+.lista-votos h2 { text-align: center; }
+.lista-votos h3 { margin: 14px 0 6px; font-size: 1rem; }
+.votante { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.votante .avatar { width: 26px; height: 26px; }

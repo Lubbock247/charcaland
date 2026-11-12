@@ -165,16 +165,22 @@ async function noticiasListar(env, tipo, u) {
     "SELECT o.id, o.noticia_id, o.texto FROM opciones o JOIN noticias n ON n.id = o.noticia_id WHERE n.tipo = 'evento' ORDER BY o.orden, o.id"
   ).all()).results;
   const votos = (await env.DB.prepare(
-    "SELECT v.noticia_id, v.opcion_id, v.usuario_id, us.nombre FROM votos v LEFT JOIN usuarios us ON us.id = v.usuario_id"
+    "SELECT v.noticia_id, v.opcion_id, v.usuario_id, us.nombre, us.avatar FROM votos v LEFT JOIN usuarios us ON us.id = v.usuario_id ORDER BY v.rowid"
   ).all()).results;
   const admin = u && u.rol === "admin";
   for (const n of lista) {
     // Quién votó: visible para todos si no es anónima; en las anónimas, solo para los administradores.
     const verNombres = !n.anonima || admin;
+    const persona = v => ({ id: v.usuario_id, nombre: v.nombre || "?", avatar: v.avatar });
     n.opciones = ops.filter(o => o.noticia_id === n.id).map(o => {
       const vs = votos.filter(v => v.opcion_id === o.id);
-      return { id: o.id, texto: o.texto, votos: vs.length, ...(verNombres ? { votantes: vs.map(v => v.nombre || "?") } : {}) };
+      return { id: o.id, texto: o.texto, votos: vs.length,
+        // fotos de los 3 últimos (en las anónimas, a quien no es admin no se le dice quién)
+        ultimos: vs.slice(-3).reverse().map(v => n.anonima ? {} : { id: v.usuario_id, avatar: v.avatar }),
+        ...(verNombres ? { votantes: vs.slice().reverse().map(persona) } : {}) };
     });
+    n.votantes = new Set(votos.filter(v => v.noticia_id === n.id).map(v => v.usuario_id)).size;
+    n.ver_votos = verNombres;
     n.mis_votos = u ? votos.filter(v => v.noticia_id === n.id && v.usuario_id === u.id).map(v => v.opcion_id) : [];
   }
   return lista;

@@ -123,23 +123,45 @@ function siguienteVersion(items) {
 }
 
 // Votación: se ve y se vota igual en la lista y dentro del evento.
+// Porcentaje = parte de los votantes que eligió cada opción (en las de varias respuestas puede sumar más de 100%).
+// Casilla redonda si es de una respuesta y cuadrada si es de varias. Hasta 3 caras de los últimos votantes;
+// en las anónimas, círculos grises.
 function htmlVotacion(n, u, admin) {
-  const total = n.opciones.reduce((s, o) => s + o.votos, 0);
+  const total = n.votantes || 0;
   const abierta = !esPasado(n), puedeVotar = u && abierta;
   const mios = n.mis_votos || [];
   const max = Math.max(...n.opciones.map(o => o.votos));
-  const etiq = [n.multiple ? "Varias respuestas" : "Una respuesta", n.anonima ? "Anónima" : "Pública"].join(" · ");
-  return `<div class="votacion-caja"><div class="votacion-cab"><b>Votación</b><span>${etiq}</span></div>
+  const caras = o => {
+    if (!o.votos) return "";
+    const ultimos = o.ultimos || [];
+    return `<span class="caras ${n.anonima ? "anonimas" : ""}">${ultimos.map(p =>
+      p.id ? `<img src="${avatarDe(p, 32)}" alt="">` : `<span></span>`).join("")}${o.votos > ultimos.length ? `<span class="mas-caras">+${o.votos - ultimos.length}</span>` : ""}</span>`;
+  };
+  return `<div class="votacion-caja ${n.multiple ? "multiple" : ""}"><div class="votacion-cab"><b>Votación</b></div>
     ${n.opciones.map(o => {
       const pct = total ? Math.round(o.votos * 100 / total) : 0;
-      const mio = mios.includes(o.id), ganadora = !abierta && total && o.votos === max;
-      const quien = o.votantes && o.votantes.length ? `<span class="votantes">${o.votantes.map(esc).join(", ")}${n.anonima ? " · solo lo ven los admins" : ""}</span>` : "";
+      const mio = mios.includes(o.id), ganadora = !abierta && o.votos && o.votos === max;
       return `<${puedeVotar ? `button type="button" data-votar="${o.id}" data-noticia="${n.id}"` : "div"} class="opcion-voto ${mio ? "mia" : ""} ${ganadora ? "ganadora" : ""}">
         <span class="barra-voto" style="width:${pct}%"></span>
         <span class="marca-voto">${mio ? "✓" : ""}</span>
-        <span class="txt-voto">${esc(o.texto)}${quien}</span><span class="num-voto">${o.votos}</span>
+        <span class="txt-voto">${esc(o.texto)}</span>${caras(o)}<span class="num-voto">${pct}%</span>
       </${puedeVotar ? "button" : "div"}>`; }).join("")}
-    <p class="ayuda">${total} voto${total === 1 ? "" : "s"}${!abierta ? " · votación terminada" : u ? "" : " · entra con Discord para votar"}</p></div>`;
+    <div class="votacion-pie"><span class="ayuda">${total} votante${total === 1 ? "" : "s"}${!abierta ? " · votación terminada" : u ? "" : " · entra con Discord para votar"}</span>
+    ${n.ver_votos && total ? `<button type="button" class="btn g ver-votos" data-ver-votos="${n.id}">Votaciones</button>` : ""}</div></div>`;
+}
+
+// Ventana con quién votó cada opción
+function ventanaVotos(n) {
+  const fondo = document.createElement("div");
+  fondo.className = "fondo-fuera";
+  fondo.innerHTML = `<div class="aviso-fuera lista-votos"><h2>Votaciones</h2>
+    ${n.opciones.map(o => `<h3>${esc(o.texto)} · ${o.votos}</h3>${(o.votantes || []).map(p =>
+      `<div class="votante"><img class="avatar" src="${avatarDe(p, 32)}" alt="">${esc(p.nombre)}</div>`).join("") || `<p class="ayuda">Nadie</p>`}`).join("")}
+    <a class="btn g" href="#" id="cerrarVotos">Cerrar</a></div>`;
+  document.body.appendChild(fondo);
+  const cerrar = () => fondo.remove();
+  fondo.querySelector("#cerrarVotos").onclick = e => { e.preventDefault(); cerrar(); };
+  fondo.onclick = e => { if (e.target === fondo) cerrar(); };
 }
 
 // Interruptor bonito (on/off) para el formulario
@@ -223,18 +245,20 @@ async function paginaNoticias(tipo) {
       e.stopPropagation();
       try { await api("/api/votar", { method: "POST", body: JSON.stringify({ noticia_id: Number(b.dataset.noticia), opcion_id: Number(b.dataset.votar) }) }); recargar(); }
       catch (er) { alert(er.message); } });
+    caja.querySelectorAll("[data-ver-votos]").forEach(b => b.onclick = e => {
+      e.stopPropagation(); ventanaVotos(items.find(x => x.id == b.dataset.verVotos)); });
   }
 
   function pintar() {
     const h = location.hash.slice(1);
     const n = /^\d+$/.test(h) && items.find(x => x.id == h);
     if (n) {   // Vista de una sola, con el texto completo
-      caja.innerHTML = `<a href="#" class="btn g volver">← Volver</a>
-        <div class="tarjeta noticia-completa ${esPasado(n) ? "pasado" : ""}">
+      caja.innerHTML = `<div class="tarjeta noticia-completa ${esPasado(n) ? "pasado" : ""}">
+        <div class="barra-noticia"><a href="#" class="btn g volver">← Volver</a>
+        ${admin ? `<span><a class="btn g" href="#" id="editarN">Editar</a><a class="btn g peligro" href="#" id="borrarN">Borrar</a></span>` : ""}</div>
         <h2>${esc(tituloNoticia(n))}</h2><div class="fecha">${fechaNoticia(n)}</div>
         <p class="resumen-noticia">${esc(n.resumen)}</p><div class="texto-noticia">${esc(n.texto)}</div>
-        ${esVotacion(n) ? htmlVotacion(n, u, admin) : ""}
-        ${admin ? `<div class="acciones-noticia"><a class="btn g" href="#" id="editarN">Editar</a><a class="btn g peligro" href="#" id="borrarN">Borrar</a></div>` : ""}</div>`;
+        ${esVotacion(n) ? htmlVotacion(n, u, admin) : ""}</div>`;
       caja.querySelector(".volver").onclick = e => { e.preventDefault(); history.length > 1 ? history.back() : (location.hash = ""); };
       enlazar();
       if (admin) {

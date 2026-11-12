@@ -80,3 +80,16 @@ Apunta aquí lo que veas raro:
 - [ ] Con «Anónima», tú (admin) ves los nombres; un amigo no.
 - [ ] Un evento sin fecha con «Mostrar en Inicio» sale en la pestaña Inicio.
 - [ ] El botón «← Volver» se ve bien.
+
+## Nuevo diseño de votación (12/11/2026)
+
+**Ya comprobado por Claude** (sin sesión y con un ejemplo inventado): porcentajes, hasta 3 caras y «+N», círculos grises en la anónima, ventana «Votaciones» con nombres, «← Volver» dentro del cuadro. En tu votación anónima, sin sesión no sale el botón «Votaciones».
+
+**Contigo (admin):**
+- [ ] «Editar» y «Borrar» salen arriba a la derecha dentro del cuadro.
+- [ ] En tu votación anónima te sale el botón «Votaciones» y ves los nombres.
+- [ ] Las de varias respuestas tienen casilla cuadrada; las de una, redonda.
+
+**Con un amigo:**
+- [ ] En la anónima ve círculos grises y no le sale «Votaciones».
+- [ ] En una pública ve las caras y el botón «Votaciones».
