@@ -28,9 +28,27 @@ async function usuarioDe(req, env) {
   await env.DB.prepare(
     "INSERT INTO usuarios (id, nombre, avatar) VALUES (?1, ?2, ?3) ON CONFLICT(id) DO UPDATE SET nombre = ?2, avatar = ?3"
   ).bind(u.id, nombre, u.avatar).run();
-  const fila = await env.DB.prepare("SELECT id, nombre, avatar, saldo FROM usuarios WHERE id = ?1").bind(u.id).first();
+  const fila = await env.DB.prepare("SELECT id, nombre, avatar, saldo, en_servidor, revisado FROM usuarios WHERE id = ?1").bind(u.id).first();
   const admins = env.ADMIN_IDS.split(",").map(s => s.trim()).filter(Boolean);
-  return { ...fila, rol: admins.includes(u.id) ? "admin" : "usuario" };
+  const { en_servidor, revisado, ...datos } = fila;
+  const res = { ...datos, rol: admins.includes(u.id) ? "admin" : "usuario" };
+  // Requisito: estar en el servidor de Discord. Sesiones antiguas sin el permiso "guilds" deben volver a entrar.
+  if (!(d.scopes || []).includes("guilds")) return { ...res, fuera: "permiso" };
+  const reciente = revisado && Date.now() - Date.parse(revisado + "Z") < 10 * 60 * 1000;
+  if (en_servidor && reciente) return res;
+  const g = await fetch("https://discord.com/api/users/@me/guilds", { headers: { Authorization: auth } });
+  if (!g.ok) return en_servidor ? res : { ...res, fuera: "servidor" }; // si Discord falla, se respeta lo último sabido
+  const dentro = (await g.json()).some(s => s.id === env.DISCORD_GUILD_ID);
+  await env.DB.prepare("UPDATE usuarios SET en_servidor = ?1, revisado = datetime('now') WHERE id = ?2").bind(dentro ? 1 : 0, u.id).run();
+  return dentro ? res : { ...res, fuera: "servidor" };
+}
+
+// Igual que usuarioDe, pero devuelve una respuesta de error si no vale para hacer cosas.
+async function miembroDe(req, env, cab) {
+  const u = await usuarioDe(req, env);
+  if (!u) return [null, json({ error: "No has iniciado sesión" }, 401, cab)];
+  if (u.fuera) return [null, json({ error: "Tienes que estar en el Discord del servidor", fuera: u.fuera }, 403, cab)];
+  return [u, null];
 }
 
 // ---- Wikis (Mods y Lore) ----
@@ -170,21 +188,21 @@ export default {
         return p ? json(p, 200, cab) : json({ error: "No existe esa página" }, 404, cab);
       }
       if (ruta === "/api/wiki" && req.method === "POST") {
-        const u = await usuarioDe(req, env);
-        if (!u) return json({ error: "No has iniciado sesión" }, 401, cab);
+        const [u, error] = await miembroDe(req, env, cab);
+        if (error) return error;
         const [est, cuerpo] = await wikiGuardar(env, u, await req.json());
         return json(cuerpo, est, cab);
       }
       const b = ruta.match(/^\/api\/wiki\/(\d+)$/);
       if (b && req.method === "DELETE") {
-        const u = await usuarioDe(req, env);
-        if (!u) return json({ error: "No has iniciado sesión" }, 401, cab);
+        const [u, error] = await miembroDe(req, env, cab);
+        if (error) return error;
         const [est, cuerpo] = await wikiBorrar(env, u, b[1]);
         return json(cuerpo, est, cab);
       }
       if (ruta === "/api/sugerencia" && req.method === "POST") {
-        const u = await usuarioDe(req, env);
-        if (!u) return json({ error: "No has iniciado sesión" }, 401, cab);
+        const [u, error] = await miembroDe(req, env, cab);
+        if (error) return error;
         const [est, cuerpo] = await enviarSugerencia(env, u, await req.json());
         return json(cuerpo, est, cab);
       }

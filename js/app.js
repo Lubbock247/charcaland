@@ -24,7 +24,7 @@ function fechaBonita(f) {
 function irALogin() {
   if (!CONFIG.discordClientId) return;
   const p = new URLSearchParams({ client_id: CONFIG.discordClientId, response_type: "token",
-    scope: "identify", redirect_uri: location.origin + location.pathname.replace(/[^/]*$/, "") + "sugerencias.html" });
+    scope: "identify guilds", redirect_uri: location.origin + location.pathname.replace(/[^/]*$/, "") + "sugerencias.html" });
   location.href = "https://discord.com/oauth2/authorize?" + p;
 }
 function avatarDe(u, t) {
@@ -33,13 +33,15 @@ function avatarDe(u, t) {
 }
 function salir() { try { localStorage.removeItem("dc_token"); } catch {} location.reload(); }
 // Devuelve {id, nombre, saldo, rol} o null si no hay sesión.
+// Si ha entrado pero no está en el Discord del servidor, devuelve null y FUERA dice por qué.
+let FUERA = null;
 const SESION = (async () => {
   let t = null;
   try { t = localStorage.getItem("dc_token"); } catch {}
   if (!t || !CONFIG.api) return null;
   try {
     const r = await fetch(CONFIG.api + "/api/yo", { headers: { Authorization: "Bearer " + t } });
-    if (r.ok) return await r.json();
+    if (r.ok) { const u = await r.json(); if (!u.fuera) return u; FUERA = u.fuera; return null; }
     if (r.status === 401) { try { localStorage.removeItem("dc_token"); } catch {} }
   } catch {}
   return null;
@@ -58,9 +60,27 @@ const SESION = (async () => {
       ? `<span class="saldo" title="Tus monedas">${u.saldo} monedas</span><a href="perfil.html" class="perfil" title="Tu perfil"><img class="avatar" src="${avatarDe(u)}" alt="${esc(u.nombre)}"></a>`
       : `<a href="#" id="entrarNav">Entrar con Discord</a>`;
     const n = document.getElementById("entrarNav"); if (n) n.onclick = e => { e.preventDefault(); irALogin(); };
+    if (FUERA) avisoFuera();
   });
   document.getElementById("pie").textContent = `${CONFIG.nombreServidor} · servidor privado de amigos`;
 })();
+
+// Aviso en todas las páginas para quien ha entrado pero no está en el Discord del servidor.
+function avisoFuera() {
+  const permiso = FUERA === "permiso";
+  const caja = document.createElement("div");
+  caja.className = "aviso-fuera";
+  caja.innerHTML = permiso
+    ? `<p>La web ha cambiado: vuelve a entrar con Discord para seguir usándola.</p>
+       <a class="btn" href="#" id="fueraEntrar">Volver a entrar</a>`
+    : `<p>Para usar la web tienes que estar en el Discord de ${esc(CONFIG.nombreServidor)}.</p>
+       ${CONFIG.invitacionDiscord ? `<a class="btn" href="${esc(CONFIG.invitacionDiscord)}" target="_blank" rel="noopener">Unirme al Discord</a>` : ""}
+       <a class="btn g" href="#" id="fueraComprobar">Ya me he unido, comprobar</a>
+       <a class="btn g" href="#" id="fueraSalir">Salir</a>`;
+  document.getElementById("cabecera").after(caja);
+  const on = (id, f) => { const b = document.getElementById(id); if (b) b.onclick = e => { e.preventDefault(); f(); }; };
+  on("fueraEntrar", irALogin); on("fueraComprobar", () => location.reload()); on("fueraSalir", salir);
+}
 
 const render = {
   updates() {
