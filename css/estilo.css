@@ -231,3 +231,10 @@ main.ancha { max-width: 1200px; }
 
 /* Dentro de una wiki se oculta el título grande de la página */
 body.en-wiki main.ancha > h1, body.en-wiki main.ancha > .sub { display: none; }
+
+/* Índice de la página dentro del menú lateral */
+.indice-menu { display: flex; flex-direction: column; margin: 2px 0 8px 12px; padding-left: 10px; border-left: 2px solid var(--borde); }
+.wmenu .indice-menu a.ancla { padding: 4px 10px; font-size: .86rem; color: var(--suave); border-radius: 6px; }
+.wmenu .indice-menu a.ancla:hover { color: var(--texto); background: var(--panel2); }
+.wmenu .indice-menu a.ancla.n4 { padding-left: 22px; font-size: .82rem; }
+.toc a.ancla.n4 { padding-left: 14px; }

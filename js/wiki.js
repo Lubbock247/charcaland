@@ -193,16 +193,24 @@ function iniciarWiki(seccion) {
       (wikis.length || admin() ? "" : `<div class="vacio">Aún no hay wikis.</div>`);
   }
 
-  function articulo(p, migas) {
+  // Índice de apartados ("En esta página"): con menú lateral va dentro del menú,
+  // debajo de la página abierta; sin menú (Inicio de una wiki) va en el texto.
+  let indiceActual = [];
+  const enlacesIndice = (p, ind) => ind.map(i =>
+    `<a href="#${p.slug}" data-ancla="${i.id}" class="ancla n${i.nivel}">${esc(i.texto)}</a>`).join("");
+  function articulo(p, migas, sinMenu) {
     const botones = puede(p.categoria, p)
       ? `<div class="acciones"><a class="btn g" href="#editar-${p.slug}">${icono("pencil")} Editar</a> <a class="btn g peligro" href="#" id="borrar">${icono("trash")}</a></div>` : "";
     const { html, indice } = formato(p.contenido, resolver);
-    const toc = indice.length >= 4
-      ? `<div class="toc"><strong>En esta página</strong>` + indice.map(i => `<a href="#${p.slug}" data-ancla="${i.id}" style="padding-left:${(i.nivel - 3) * 14}px">${esc(i.texto)}</a>`).join("") + `</div>` : "";
+    indiceActual = indice;
+    const toc = sinMenu && indice.length >= 4 ? `<div class="toc"><strong>En esta página</strong>${enlacesIndice(p, indice)}</div>` : "";
     const autor = p.autor && esLore ? `<div class="fecha">por ${esc(p.autor)}</div>` : "";
     return `${botones}<div class="migas">${migas}</div><h2 class="wtitulo">${esc(p.titulo)}</h2>${autor}${toc}${html}`;
   }
   function activarArticulo(p, alBorrar) {
+    const sel = raiz.querySelector(".wmenu a.sel");
+    if (sel && indiceActual.length >= 2) sel.insertAdjacentHTML("afterend", `<div class="indice-menu">${enlacesIndice(p, indiceActual)}</div>`);
+    indiceActual = [];
     raiz.querySelectorAll("[data-ancla]").forEach(a => a.onclick = e => {
       e.preventDefault(); document.getElementById(a.dataset.ancla)?.scrollIntoView({ behavior: "smooth" });
     });
@@ -228,7 +236,7 @@ function iniciarWiki(seccion) {
       const secs = hijos(wiki.id);
       const accesos = secs.length ? `<h3>Secciones</h3><div class="accesos">` + secs.map(s =>
         `<a href="#${s.slug}"><strong>${esc(s.titulo)}</strong><span>${hijos(s.id).length || ""}${hijos(s.id).length ? " páginas" : ""}</span></a>`).join("") + `</div>` : "";
-      pintar(cabeceraMods(wiki, null), null, articulo(p, `<a href="#">Mods</a> › ${esc(wiki.titulo)}`) + accesos);
+      pintar(cabeceraMods(wiki, null), null, articulo(p, `<a href="#">Mods</a> › ${esc(wiki.titulo)}`, true) + accesos);
       return activarArticulo(p, "");
     }
     let menu = (sec.largo ? `<a href="#${sec.slug}" class="${slug === sec.slug ? "sel" : ""}">${esc(sec.titulo)}</a>` : "") +
