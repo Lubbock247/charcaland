@@ -68,16 +68,26 @@ const SESION = (async () => {
 // Aviso en todas las páginas para quien ha entrado pero no está en el Discord del servidor.
 function avisoFuera() {
   const permiso = FUERA === "permiso";
+  // Sesión antigua sin el permiso nuevo: se le manda a entrar otra vez (solo una vez, para no hacer bucle).
+  if (permiso) {
+    let ya = false;
+    try { ya = sessionStorage.getItem("reentrado"); sessionStorage.setItem("reentrado", "1"); } catch {}
+    if (!ya) { irALogin(); return; }
+  }
+  const fondo = document.createElement("div");
+  fondo.className = "fondo-fuera";
   const caja = document.createElement("div");
   caja.className = "aviso-fuera";
+  fondo.appendChild(caja);
   caja.innerHTML = permiso
     ? `<p>La web ha cambiado: vuelve a entrar con Discord para seguir usándola.</p>
        <a class="btn" href="#" id="fueraEntrar">Volver a entrar</a>`
-    : `<p>Para usar la web tienes que estar en el Discord de ${esc(CONFIG.nombreServidor)}.</p>
+    : `<h2>Únete al Discord</h2>
+       <p>Para usar la web tienes que estar en el Discord de ${esc(CONFIG.nombreServidor)}.</p>
        ${CONFIG.invitacionDiscord ? `<a class="btn" href="${esc(CONFIG.invitacionDiscord)}" target="_blank" rel="noopener">Unirme al Discord</a>` : ""}
        <a class="btn g" href="#" id="fueraComprobar">Ya me he unido, comprobar</a>
        <a class="btn g" href="#" id="fueraSalir">Salir</a>`;
-  document.getElementById("cabecera").after(caja);
+  document.body.appendChild(fondo);
   const on = (id, f) => { const b = document.getElementById(id); if (b) b.onclick = e => { e.preventDefault(); f(); }; };
   on("fueraEntrar", irALogin); on("fueraComprobar", () => location.reload()); on("fueraSalir", salir);
 }

@@ -241,5 +241,7 @@ body.en-wiki main.ancha > h1, body.en-wiki main.ancha > .sub { display: none; }
 
 .pista { margin: 6px 0; font-size: .85rem; color: var(--suave); }
 .pista i { color: #f2c94c; }
-.aviso-fuera { max-width: 900px; margin: 16px auto; padding: 14px 18px; border-radius: 8px; background: var(--panel2); border: 1px solid var(--acento); text-align: center; }
+.fondo-fuera { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.aviso-fuera { max-width: 460px; width: 100%; padding: 24px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--acento); text-align: center; }
+.aviso-fuera h2 { margin: 0 0 8px; }
 .aviso-fuera p { margin: 0 0 8px; }
