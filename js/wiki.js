@@ -54,8 +54,9 @@ function formato(texto, resolver) {
         `<table>` + filas.map(([k, v]) => `<tr><th>${inline(k)}</th><td>${inline(v)}</td></tr>`).join("") + "</table></aside>");
     } else {
       salida.push(`<div class="habs">` + bloque.filas.map(partes => {
-        const [nivel, nombre, desc] = partes.length >= 3 ? partes : ["", partes[0], partes[1] || ""];
-        return `<div class="hab">${nivel ? `<span class="nivel">${inline(nivel)}</span>` : ""}<strong>${inline(nombre || "")}</strong><p>${inline(desc)}</p></div>`;
+        const [nivel, nombre, desc] = partes.length >= 3 ? partes
+          : /^nivel\s*\d+$/i.test(partes[0]) ? [partes[0], partes[1] || "", ""] : ["", partes[0], partes[1] || ""];
+        return `<div class="hab">${nivel ? `<span class="nivel">${inline(nivel)}</span>` : ""}<strong>${inline(nombre || "")}</strong>${desc ? `<p>${inline(desc)}</p>` : ""}</div>`;
       }).join("") + `</div>`);
     }
     bloque = null;
