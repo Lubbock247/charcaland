@@ -11,13 +11,6 @@ const CONFIG = {
   discordClientId: "1569682266156957696",   // ID de la aplicación de Discord (para "Entrar con Discord")
 };
 
-const UPDATES = [
-  { fecha: "2026-11-10", titulo: "Nueva web del servidor", etiqueta: "Web",
-    texto: "Estrenamos esta página con noticias, eventos, lore y un buzón de sugerencias." },
-  { fecha: "2026-11-01", titulo: "Expansiones de Dominio (en pruebas)", etiqueta: "Mod",
-    texto: "Primer dominio disponible: Black Hand of Catastrophe. Pronto más." },
-];
-
 const EVENTOS = [
   { fecha: "2026-12-01", titulo: "Evento de ejemplo", estado: "Próximo",
     texto: "PROVISIONAL: aquí irá la descripción, las reglas y los premios." },

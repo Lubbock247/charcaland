@@ -8,12 +8,12 @@ Es privada, para el usuario y sus amigos. Repositorio git propio (rama `main`).
 
 - **Páginas HTML en la raíz:** `index.html`, `eventos.html`, `lore.html`, `mercadillo.html`, `mods.html`, `perfil.html`, `sugerencias.html`, `updates.html`.
 - **`css/estilo.css`:** todos los estilos.
-- **`js/datos.js`:** el contenido que se edita sin tocar el resto (nombre del servidor, enlaces, eventos). Lo marcado como PROVISIONAL es de ejemplo.
+- **`js/datos.js`:** ajustes que se editan sin tocar el resto (nombre del servidor, enlaces, eventos aún). Las updates ya están en la base de datos. Lo marcado como PROVISIONAL es de ejemplo.
 - **`js/app.js`:** lógica común: cabecera, pie, sesión.
 - **`js/wiki.js`:** editor y vista previa de las wikis.
 - **`api/`:** servidor de cuentas, saldo y wikis. Es un Cloudflare Worker (`charcaland-api`) con base de datos D1 (`charcaland`).
   - `api/src/index.js`: rutas (por ejemplo `/api/yo` y `/api/wiki`) y comprobación de Discord.
-  - `api/schema.sql`: tablas `usuarios` y `paginas`.
+  - `api/schema.sql`: tablas `usuarios`, `paginas` y `noticias` (eventos y updates; las crean los admins desde la web).
   - `api/semilla*.sql`: datos de ejemplo para la base de datos.
   - `api/wrangler.jsonc`: nombre del Worker, base de datos, identificadores de Discord, administradores y orígenes permitidos (`ORIGENES`, para CORS).
 - **`api/` dependencias:** `wrangler` (en `api/package.json`). Se ejecuta desde esa carpeta.
@@ -30,3 +30,5 @@ Es privada, para el usuario y sus amigos. Repositorio git propio (rama `main`).
 
 - **Sugerencias:** se envían por `POST /api/sugerencia` (hace falta sesión de Discord; 30 s entre envíos por usuario). El webhook es el secreto `WEBHOOK_SUGERENCIAS` del Worker (`npx wrangler secret put WEBHOOK_SUGERENCIAS`); nunca va en el front. El webhook antiguo quedó en el historial de git: hay que borrarlo en Discord.
 - **Publicación:** el front está publicado en GitHub Pages con enlace público; al usuario le vale así. Lo que se sube a `main` acaba en la web, así que no hagas push sin que lo pida.
+- **Para el futuro:** publicar los eventos también en «Eventos» del servidor de Discord (hará falta el bot con permiso de gestionar eventos).
+- **Por probar:** `por-probar.md` recoge lo que necesita cuentas reales de Discord.

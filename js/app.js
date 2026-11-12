@@ -65,6 +65,20 @@ const SESION = (async () => {
   document.getElementById("pie").textContent = `${CONFIG.nombreServidor} · servidor privado de amigos`;
 })();
 
+// Llamadas a la API con la sesión de Discord (también la usa wiki.js).
+async function api(ruta, opciones) {
+  let t = null;
+  try { t = localStorage.getItem("dc_token"); } catch {}
+  const r = await fetch(CONFIG.api + ruta, {
+    ...opciones,
+    headers: { "Content-Type": "application/json", ...(t ? { Authorization: "Bearer " + t } : {}) },
+  });
+  let datos = {};
+  try { datos = await r.json(); } catch {}
+  if (!r.ok) throw new Error(datos.error || "Error del servidor");
+  return datos;
+}
+
 // Aviso en todas las páginas para quien ha entrado pero no está en el Discord del servidor.
 function avisoFuera() {
   const permiso = FUERA === "permiso";
@@ -92,11 +106,53 @@ function avisoFuera() {
   on("fueraEntrar", irALogin); on("fueraComprobar", () => location.reload()); on("fueraSalir", salir);
 }
 
+// Ventana para crear o editar un evento o una update (solo administradores).
+function editorNoticia(tipo, n) {
+  const hoy = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" });
+  const fondo = document.createElement("div");
+  fondo.className = "fondo-fuera";
+  fondo.innerHTML = `<form class="aviso-fuera editor-noticia">
+    <h2>${n ? "Editar" : "Nueva"} ${tipo === "update" ? "update" : "evento"}</h2>
+    <label>Título</label><input name="titulo" required maxlength="120" value="${esc(n ? n.titulo : "")}">
+    <label>Fecha</label><input name="fecha" type="date" ${tipo === "update" ? "required" : ""} value="${esc(n ? n.fecha || "" : hoy)}">
+    <label>Etiqueta</label><input name="etiqueta" maxlength="30" placeholder="Mod, Web, Servidor…" value="${esc(n ? n.etiqueta : "")}">
+    <label>Texto</label><textarea name="texto" maxlength="4000">${esc(n ? n.texto : "")}</textarea>
+    <div class="aviso oculto" id="errNoticia"></div>
+    <button type="submit">Guardar</button> <a class="btn g" href="#" id="cancelarNoticia">Cancelar</a>
+  </form>`;
+  document.body.appendChild(fondo);
+  const f = fondo.querySelector("form");
+  fondo.querySelector("#cancelarNoticia").onclick = e => { e.preventDefault(); fondo.remove(); };
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(f));
+    try {
+      await api("/api/noticias", { method: "POST", body: JSON.stringify({ ...d, tipo, id: n ? n.id : undefined }) });
+      fondo.remove(); render[tipo === "update" ? "updates" : "eventos"]();
+    } catch (er) { const m = fondo.querySelector("#errNoticia"); m.textContent = er.message; m.classList.remove("oculto"); }
+  };
+}
+
 const render = {
-  updates() {
-    document.getElementById("lista").innerHTML = UPDATES.map(u =>
-      `<div class="tarjeta"><span class="etiqueta">${esc(u.etiqueta)}</span>
-       <h3>${esc(u.titulo)}</h3><div class="fecha">${fechaBonita(u.fecha)}</div><p>${esc(u.texto)}</p></div>`).join("");
+  async updates() {
+    const lista = document.getElementById("lista");
+    const [u, items] = await Promise.all([SESION, api("/api/noticias/updates").catch(() => null)]);
+    if (!items) { lista.innerHTML = `<div class="vacio">No se pudieron cargar las updates.</div>`; return; }
+    const admin = u && u.rol === "admin";
+    lista.innerHTML = (admin ? `<div><a class="btn" href="#" id="nuevaNoticia">+ Nueva update</a></div>` : "") +
+      (items.length ? items.map(n =>
+        `<div class="tarjeta"><span class="etiqueta">${esc(n.etiqueta)}</span>
+         <h3>${esc(n.titulo)}</h3><div class="fecha">${fechaBonita(n.fecha)}</div><p class="texto-noticia">${esc(n.texto)}</p>
+         ${admin ? `<div class="acciones-noticia"><a class="btn g" href="#" data-editar="${n.id}">Editar</a><a class="btn g peligro" href="#" data-borrar="${n.id}">Borrar</a></div>` : ""}</div>`).join("")
+        : `<div class="vacio">Aún no hay updates.</div>`);
+    if (!admin) return;
+    document.getElementById("nuevaNoticia").onclick = e => { e.preventDefault(); editorNoticia("update", null); };
+    lista.querySelectorAll("[data-editar]").forEach(b => b.onclick = e => { e.preventDefault();
+      editorNoticia("update", items.find(n => n.id == b.dataset.editar)); });
+    lista.querySelectorAll("[data-borrar]").forEach(b => b.onclick = async e => { e.preventDefault();
+      const n = items.find(x => x.id == b.dataset.borrar);
+      if (!confirm(`¿Borrar «${n.titulo}»? No se puede deshacer.`)) return;
+      try { await api("/api/noticias/" + n.id, { method: "DELETE" }); render.updates(); } catch (er) { alert(er.message); } });
   },
   mods() { if (location.hash.length > 1) document.body.classList.add("en-wiki"); iniciarWiki("mods"); },
   eventos() {
@@ -116,8 +172,9 @@ const render = {
       <a class="btn g" href="#" id="btnSalir">Salir</a></div></div>`;
     document.getElementById("btnSalir").onclick = e => { e.preventDefault(); salir(); };
   },
-  inicio() {
-    const u = UPDATES[0], e = EVENTOS[0];
+  async inicio() {
+    const e = EVENTOS[0];
+    const u = (await api("/api/noticias/updates").catch(() => []))[0] || { titulo: "Aún no hay updates" };
     document.getElementById("evento").innerHTML =
       `<a class="tarjeta" href="eventos.html"><span class="etiqueta verde">${esc(e.estado)}</span><h3>${esc(e.titulo)}</h3><p>${fechaBonita(e.fecha)}</p></a>
        <a class="tarjeta" href="updates.html"><div class="icono">◆</div><h3>Última update</h3><p>${esc(u.titulo)}</p></a>

@@ -96,18 +96,6 @@ function formato(texto, resolver) {
   return { html: salida.join("\n"), indice };
 }
 
-async function api(ruta, opciones) {
-  let t = null;
-  try { t = localStorage.getItem("dc_token"); } catch {}
-  const r = await fetch(CONFIG.api + ruta, {
-    ...opciones,
-    headers: { "Content-Type": "application/json", ...(t ? { Authorization: "Bearer " + t } : {}) },
-  });
-  let datos = {};
-  try { datos = await r.json(); } catch {}
-  if (!r.ok) throw new Error(datos.error || "Error del servidor");
-  return datos;
-}
 
 // ---------- Botones del editor ----------
 const PLANTILLAS = {

@@ -149,6 +149,47 @@ async function wikiBorrar(env, u, id) {
   return [200, { ok: true }];
 }
 
+// ---- Noticias (eventos y updates). Solo los administradores crean, editan y borran. ----
+const TIPOS_NOTICIA = { eventos: "evento", updates: "update" };
+const fechaValida = f => /^\d{4}-\d{2}-\d{2}$/.test(f) && !isNaN(Date.parse(f));
+
+async function noticiasListar(env, tipo) {
+  const r = await env.DB.prepare(
+    "SELECT id, tipo, titulo, fecha, etiqueta, texto, cierre_votacion, votacion_cerrada FROM noticias WHERE tipo = ?1 ORDER BY fecha IS NULL, fecha DESC, id DESC"
+  ).bind(tipo).all();
+  return r.results;
+}
+
+async function noticiaGuardar(env, u, d) {
+  if (u.rol !== "admin") return [403, { error: "Solo los administradores pueden hacer esto" }];
+  const tipo = d.tipo === "evento" ? "evento" : d.tipo === "update" ? "update" : null;
+  if (!tipo) return [400, { error: "Tipo no válido" }];
+  const titulo = String(d.titulo || "").trim().slice(0, 120);
+  if (!titulo) return [400, { error: "Falta el título" }];
+  const fecha = String(d.fecha || "").trim();
+  if (fecha && !fechaValida(fecha)) return [400, { error: "Fecha no válida" }];
+  if (!fecha && tipo === "update") return [400, { error: "Falta la fecha" }];
+  const etiqueta = String(d.etiqueta || "").trim().slice(0, 30);
+  const texto = String(d.texto || "").trim().slice(0, 4000);
+  if (d.id) {
+    const r = await env.DB.prepare(
+      "UPDATE noticias SET titulo = ?1, fecha = ?2, etiqueta = ?3, texto = ?4, autor_id = ?5, actualizado = datetime('now') WHERE id = ?6 AND tipo = ?7"
+    ).bind(titulo, fecha || null, etiqueta, texto, u.id, Number(d.id), tipo).run();
+    if (!r.meta.changes) return [404, { error: "No existe" }];
+    return [200, { id: Number(d.id) }];
+  }
+  const r = await env.DB.prepare(
+    "INSERT INTO noticias (tipo, titulo, fecha, etiqueta, texto, autor_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
+  ).bind(tipo, titulo, fecha || null, etiqueta, texto, u.id).run();
+  return [200, { id: r.meta.last_row_id }];
+}
+
+async function noticiaBorrar(env, u, id) {
+  if (u.rol !== "admin") return [403, { error: "Solo los administradores pueden hacer esto" }];
+  const r = await env.DB.prepare("DELETE FROM noticias WHERE id = ?1").bind(Number(id)).run();
+  return r.meta.changes ? [200, { ok: true }] : [404, { error: "No existe" }];
+}
+
 // Sugerencias: el webhook de Discord es un secreto del Worker (WEBHOOK_SUGERENCIAS),
 // nunca llega a la web. El nombre lo pone la API con la sesión de Discord, no el navegador.
 const ultimaSugerencia = new Map(); // id de usuario -> hora del último envío (por instancia)
@@ -198,6 +239,21 @@ export default {
         const [u, error] = await miembroDe(req, env, cab);
         if (error) return error;
         const [est, cuerpo] = await wikiBorrar(env, u, b[1]);
+        return json(cuerpo, est, cab);
+      }
+      const n = ruta.match(/^\/api\/noticias\/(eventos|updates)$/);
+      if (n && req.method === "GET") return json(await noticiasListar(env, TIPOS_NOTICIA[n[1]]), 200, cab);
+      if (ruta === "/api/noticias" && req.method === "POST") {
+        const [u, error] = await miembroDe(req, env, cab);
+        if (error) return error;
+        const [est, cuerpo] = await noticiaGuardar(env, u, await req.json());
+        return json(cuerpo, est, cab);
+      }
+      const nb = ruta.match(/^\/api\/noticias\/(\d+)$/);
+      if (nb && req.method === "DELETE") {
+        const [u, error] = await miembroDe(req, env, cab);
+        if (error) return error;
+        const [est, cuerpo] = await noticiaBorrar(env, u, nb[1]);
         return json(cuerpo, est, cab);
       }
       if (ruta === "/api/sugerencia" && req.method === "POST") {

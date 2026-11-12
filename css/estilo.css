@@ -245,3 +245,8 @@ body.en-wiki main.ancha > h1, body.en-wiki main.ancha > .sub { display: none; }
 .aviso-fuera { max-width: 460px; width: 100%; padding: 24px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--acento); text-align: center; }
 .aviso-fuera h2 { margin: 0 0 8px; }
 .aviso-fuera p { margin: 0 0 8px; }
+.texto-noticia { white-space: pre-wrap; }
+.acciones-noticia { margin-top: 12px; }
+.acciones-noticia .btn { padding: 6px 14px; margin: 0 6px 0 0; }
+.editor-noticia { text-align: left; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+.editor-noticia h2 { text-align: center; }
