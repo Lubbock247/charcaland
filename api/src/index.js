@@ -157,7 +157,7 @@ const hoyMadrid = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Euro
 
 async function noticiasListar(env, tipo, u) {
   const r = await env.DB.prepare(
-    "SELECT id, tipo, titulo, fecha, etiqueta, resumen, texto, multiple, anonima, en_inicio FROM noticias WHERE tipo = ?1 ORDER BY fecha IS NULL, fecha DESC, id DESC"
+    "SELECT id, tipo, titulo, fecha, etiqueta, resumen, texto, multiple, anonima, en_inicio, hora_inicio, hora_fin FROM noticias WHERE tipo = ?1 ORDER BY fecha IS NULL, fecha DESC, id DESC"
   ).bind(tipo).all();
   const lista = r.results;
   if (tipo !== "evento" || !lista.length) return lista;
@@ -222,6 +222,64 @@ async function votar(env, u, d) {
   return [200, { ok: true }];
 }
 
+// ---- Eventos del servidor de Discord (reflejo de los eventos con fecha de la web) ----
+// Necesita el secreto DISCORD_BOT_TOKEN (bot en el servidor con permiso de gestionar eventos).
+const horaValida = h => /^([01]\d|2[0-3]):[0-5]\d$/.test(h);
+// "2026-12-06" + "18:00" en hora de España -> instante ISO (UTC)
+function madridAISO(fecha, hora) {
+  const [Y, M, D] = fecha.split("-").map(Number), [h, m] = hora.split(":").map(Number);
+  const guess = Date.UTC(Y, M - 1, D, h, m);
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+    .formatToParts(new Date(guess)).map(x => [x.type, x.value]));
+  const comoMadrid = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+  return new Date(guess - (comoMadrid - guess)).toISOString();
+}
+
+async function discordApi(env, metodo, ruta, cuerpo) {
+  const r = await fetch("https://discord.com/api/v10" + ruta, {
+    method: metodo,
+    headers: { Authorization: "Bot " + env.DISCORD_BOT_TOKEN, "Content-Type": "application/json" },
+    body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+  });
+  if (r.status === 404 && metodo !== "POST") return { borrado: true };
+  if (!r.ok) throw new Error("Discord " + r.status + ": " + (await r.text()).slice(0, 200));
+  return r.status === 204 ? {} : r.json();
+}
+
+// Deja el evento de Discord igual que el de la web. Devuelve un aviso si algo falla (sin impedir guardar).
+async function sincronizarDiscord(env, id) {
+  if (!env.DISCORD_BOT_TOKEN) return null;
+  const n = await env.DB.prepare("SELECT * FROM noticias WHERE id = ?1 AND tipo = 'evento'").bind(id).first();
+  if (!n) return null;
+  const base = `/guilds/${env.DISCORD_GUILD_ID}/scheduled-events`;
+  try {
+    const debeEstar = n.fecha && n.fecha >= hoyMadrid();
+    if (!debeEstar) {
+      if (n.discord_id) {
+        await discordApi(env, "DELETE", `${base}/${n.discord_id}`);
+        await env.DB.prepare("UPDATE noticias SET discord_id = NULL WHERE id = ?1").bind(id).run();
+      }
+      return null;
+    }
+    const ini = madridAISO(n.fecha, n.hora_inicio || "18:00");
+    let fin = madridAISO(n.fecha, n.hora_fin || "20:00");
+    if (fin <= ini) fin = new Date(Date.parse(fin) + 86400000).toISOString(); // termina al día siguiente
+    const datos = {
+      name: n.titulo.slice(0, 100),
+      description: `${n.resumen}\n\n${env.WEB_URL}eventos.html#${n.id}`.slice(0, 1000),
+      scheduled_start_time: ini, scheduled_end_time: fin,
+      privacy_level: 2, entity_type: 3, entity_metadata: { location: "Servidor de Minecraft" },
+    };
+    let ev = n.discord_id ? await discordApi(env, "PATCH", `${base}/${n.discord_id}`, datos) : null;
+    if (!ev || ev.borrado) ev = await discordApi(env, "POST", base, datos); // no existía o lo borraron a mano
+    if (ev.id !== n.discord_id) await env.DB.prepare("UPDATE noticias SET discord_id = ?1 WHERE id = ?2").bind(ev.id, id).run();
+    return null;
+  } catch (e) {
+    return "Guardado en la web, pero no se pudo actualizar en Discord (" + e.message + ")";
+  }
+}
+
 async function noticiaGuardar(env, u, d) {
   if (u.rol !== "admin") return [403, { error: "Solo los administradores pueden hacer esto" }];
   const tipo = d.tipo === "evento" ? "evento" : d.tipo === "update" ? "update" : null;
@@ -240,25 +298,35 @@ async function noticiaGuardar(env, u, d) {
     ? [...new Set(d.opciones.map(t => String(t).trim().slice(0, 80)).filter(Boolean))].slice(0, 12) : [];
   if (opciones.length === 1) return [400, { error: "Una votación necesita al menos 2 opciones" }];
   const ev = tipo === "evento";
+  const horaIni = ev && fecha && horaValida(d.hora_inicio || "") ? d.hora_inicio : null;
+  const horaFin = ev && fecha && horaValida(d.hora_fin || "") ? d.hora_fin : null;
   const multiple = ev && d.multiple ? 1 : 0, anonima = ev && d.anonima ? 1 : 0, enInicio = ev && !fecha && d.en_inicio ? 1 : 0;
   if (d.id) {
     const r = await env.DB.prepare(
       "UPDATE noticias SET titulo = ?1, fecha = ?2, etiqueta = ?3, texto = ?4, autor_id = ?5, resumen = ?8, multiple = ?9, anonima = ?10, en_inicio = ?11, actualizado = datetime('now') WHERE id = ?6 AND tipo = ?7"
     ).bind(titulo, fecha || null, etiqueta, texto, u.id, Number(d.id), tipo, resumen, multiple, anonima, enInicio).run();
     if (!r.meta.changes) return [404, { error: "No existe" }];
+    await env.DB.prepare("UPDATE noticias SET hora_inicio = ?1, hora_fin = ?2 WHERE id = ?3").bind(horaIni, horaFin, Number(d.id)).run();
     if (ev) await guardarOpciones(env, Number(d.id), opciones);
-    return [200, { id: Number(d.id) }];
+    const aviso = ev ? await sincronizarDiscord(env, Number(d.id)) : null;
+    return [200, { id: Number(d.id), aviso }];
   }
   const r = await env.DB.prepare(
     "INSERT INTO noticias (tipo, titulo, fecha, etiqueta, texto, autor_id, resumen, multiple, anonima, en_inicio) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
   ).bind(tipo, titulo, fecha || null, etiqueta, texto, u.id, resumen, multiple, anonima, enInicio).run();
   const id = r.meta.last_row_id;
+  await env.DB.prepare("UPDATE noticias SET hora_inicio = ?1, hora_fin = ?2 WHERE id = ?3").bind(horaIni, horaFin, id).run();
   if (opciones.length) await guardarOpciones(env, id, opciones);
-  return [200, { id }];
+  const aviso = ev ? await sincronizarDiscord(env, id) : null;
+  return [200, { id, aviso }];
 }
 
 async function noticiaBorrar(env, u, id) {
   if (u.rol !== "admin") return [403, { error: "Solo los administradores pueden hacer esto" }];
+  const vieja = await env.DB.prepare("SELECT discord_id FROM noticias WHERE id = ?1").bind(Number(id)).first();
+  if (vieja && vieja.discord_id && env.DISCORD_BOT_TOKEN) {
+    try { await discordApi(env, "DELETE", `/guilds/${env.DISCORD_GUILD_ID}/scheduled-events/${vieja.discord_id}`); } catch {}
+  }
   const [, , r] = await env.DB.batch([
     env.DB.prepare("DELETE FROM votos WHERE noticia_id = ?1").bind(Number(id)),
     env.DB.prepare("DELETE FROM opciones WHERE noticia_id = ?1").bind(Number(id)),

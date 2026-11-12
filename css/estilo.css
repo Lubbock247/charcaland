@@ -310,3 +310,4 @@ button.opcion-voto:hover { border-color: var(--acento); }
 .lista-votos h3 { margin: 14px 0 6px; font-size: 1rem; }
 .votante { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
 .votante .avatar { width: 26px; height: 26px; }
+.horas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

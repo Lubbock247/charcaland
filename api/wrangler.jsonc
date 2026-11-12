@@ -8,6 +8,7 @@
   "vars": {
     "DISCORD_CLIENT_ID": "1569682266156957696",
     "DISCORD_GUILD_ID": "1565267894500331561",
+    "WEB_URL": "https://lubbock247.github.io/charcaland/",
     "ADMIN_IDS": "688431667743948800,871460768804122684,847907957903851540",
     "ORIGENES": "https://lubbock247.github.io,http://127.0.0.1:8765"
   }

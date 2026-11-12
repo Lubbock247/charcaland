@@ -35,7 +35,10 @@ CREATE TABLE IF NOT EXISTS noticias (
   texto TEXT NOT NULL DEFAULT '',
   multiple INTEGER NOT NULL DEFAULT 0,   -- votación con varias respuestas
   anonima INTEGER NOT NULL DEFAULT 0,    -- solo los admins ven quién votó
-  en_inicio INTEGER NOT NULL DEFAULT 0,  -- evento sin fecha que sale en la pestaña Inicio
+  en_inicio INTEGER NOT NULL DEFAULT 0,
+  hora_inicio TEXT,                      -- HH:MM (hora de España); vacía = 18:00
+  hora_fin TEXT,                         -- HH:MM; vacía = 20:00
+  discord_id TEXT,                       -- evento del servidor de Discord que lo refleja  -- evento sin fecha que sale en la pestaña Inicio
   autor_id TEXT,
   actualizado TEXT NOT NULL DEFAULT (datetime('now'))
 );

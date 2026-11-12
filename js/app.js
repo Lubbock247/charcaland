@@ -112,7 +112,8 @@ const esVotacion = n => n.opciones && n.opciones.length > 1;
 const esPasado = n => n.tipo === "evento" && n.fecha && n.fecha < hoyMadrid();
 // Título como se muestra: en updates, "1.0.0 - Nombre"
 const tituloNoticia = n => n.tipo === "update" && n.etiqueta ? `${n.etiqueta} - ${n.titulo}` : n.titulo;
-const fechaNoticia = n => n.fecha ? fechaBonita(n.fecha) : "Fecha por decidir";
+const fechaNoticia = n => !n.fecha ? "Fecha por decidir" :
+  fechaBonita(n.fecha) + (n.tipo === "evento" ? ` · ${n.hora_inicio || "18:00"} a ${n.hora_fin || "20:00"}` : "");
 // Siguiente versión a la más alta (1.0.0 si no hay ninguna)
 function siguienteVersion(items) {
   const vs = items.map(x => (x.etiqueta || "").split(".").map(Number)).filter(v => v.length === 3 && !v.some(isNaN));
@@ -179,6 +180,8 @@ function editorNoticia(tipo, n, items, alGuardar) {
     ${ev ? "" : `<label>Versión</label><input name="etiqueta" required pattern="\\d+\\.\\d+\\.\\d+" value="${esc(n ? n.etiqueta : siguienteVersion(items))}">`}
     <label>Título</label><input name="titulo" required maxlength="120" value="${esc(n ? n.titulo : "")}">
     <label>Fecha</label><input name="fecha" type="date" ${ev ? "" : "required"} value="${esc(n ? n.fecha || "" : ev ? "" : hoyMadrid())}">
+    ${ev ? `<div id="cajaHoras" class="horas"><div><label>Hora de inicio</label><input name="hora_inicio" type="time" value="${esc(n && n.hora_inicio || "18:00")}"></div>
+      <div><label>Hora de fin</label><input name="hora_fin" type="time" value="${esc(n && n.hora_fin || "20:00")}"></div></div>` : ""}
     ${ev ? `<div id="cajaInicio">${interruptor("en_inicio", "Mostrar en Inicio", n && n.en_inicio, "Para eventos sin fecha")}</div>` : ""}
     <label>Texto de vista previa</label><textarea name="resumen" class="corto" maxlength="300" required>${esc(n ? n.resumen : "")}</textarea>
     <label>Texto completo</label><textarea name="texto" maxlength="4000">${esc(n ? n.texto : "")}</textarea>
@@ -204,6 +207,7 @@ function editorNoticia(tipo, n, items, alGuardar) {
     const d = datos();
     if (ev) {   // solo se enseña lo que aplica
       fondo.querySelector("#cajaInicio").classList.toggle("oculto", !!d.fecha);
+      fondo.querySelector("#cajaHoras").classList.toggle("oculto", !d.fecha);
       fondo.querySelector("#cajaVotacion").classList.toggle("oculto", d.opciones.length < 2);
     }
     fondo.querySelector("#previaNoticia").innerHTML = tarjetaNoticia({ ...d, tipo,
@@ -215,8 +219,9 @@ function editorNoticia(tipo, n, items, alGuardar) {
   f.onsubmit = async e => {
     e.preventDefault();
     try {
-      await api("/api/noticias", { method: "POST", body: JSON.stringify({ ...datos(), tipo, id: n ? n.id : undefined }) });
+      const r = await api("/api/noticias", { method: "POST", body: JSON.stringify({ ...datos(), tipo, id: n ? n.id : undefined }) });
       fondo.remove(); alGuardar();
+      if (r.aviso) alert(r.aviso);
     } catch (er) { const m = fondo.querySelector("#errNoticia"); m.textContent = er.message; m.classList.remove("oculto"); }
   };
 }
