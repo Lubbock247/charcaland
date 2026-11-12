@@ -145,8 +145,7 @@ async function enviarSugerencia(env, u, d) {
   const p = Object.fromEntries(new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid",
     day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
     .formatToParts(new Date(ahora)).map(x => [x.type, x.value]));
-  const fecha = `${p.day}/${p.month}/${p.year} - ${p.hour}:${p.minute}`;
-  const contenido = `Sugerencia de ${u.nombre} sobre ${tipo}:\n${texto}\n${fecha}`;
+  const contenido = `${u.nombre} sobre ${tipo}:\n${texto}\nFecha - ${p.day}/${p.month}/${p.year}`;
   const r = await fetch(env.WEBHOOK_SUGERENCIAS, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username: "oompa-lompa", content: contenido, allowed_mentions: { parse: [] } }),
