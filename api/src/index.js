@@ -442,6 +442,12 @@ export default {
         return json(cuerpo, est, cab);
       }
       // ---- Mercadillo ----
+      const im = ruta.match(/^\/api\/imagen\/(\d+)$/);
+      if (im && req.method === "GET") {
+        const f = await merc.leerImagen(env, im[1]);
+        if (!f) return json({ error: "No existe" }, 404, cab);
+        return new Response(f.datos, { headers: { "Content-Type": f.tipo, "Cache-Control": "public, max-age=31536000, immutable", ...cab } });
+      }
       if (ruta === "/api/mercadillo" && req.method === "GET") {
         const u = req.headers.get("Authorization") || local ? await usuarioDe(req, env) : null;
         return json(await merc.listar(env, u && !u.fuera ? u : null), 200, cab);

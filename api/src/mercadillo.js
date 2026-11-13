@@ -79,38 +79,43 @@ export async function listar(env, u) {
 }
 
 // ---- Crear y quitar ----
+// Imagen subida desde la web: llega ya reducida como data URL.
+function leerImagenSubida(v) {
+  if (!v) return [null, null];
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(v));
+  if (!m) return [null, "Una de las imágenes no es válida"];
+  if (m[2].length > 700000) return [null, "Una de las imágenes es demasiado grande"];
+  return [{ tipo: m[1], b64: m[2] }, null];
+}
+
 function leerObjetos(d, conPrecio) {
-  if (!Array.isArray(d.objetos) || !d.objetos.length || d.objetos.length > 20) return null;
+  if (!Array.isArray(d.objetos) || !d.objetos.length || d.objetos.length > 20) return [null, "Revisa los objetos: cada uno necesita nombre, cantidad y precio"];
   const objs = [];
   for (const o of d.objetos) {
     const nombre = texto(o && o.nombre, 60), cantidad = entero(o && o.cantidad, 1, 100000);
     const precio = conPrecio ? entero(o && o.precio, 0, MAX_MONEDAS) : 0;
-    if (!nombre || cantidad === null || precio === null) return null;
+    if (!nombre || cantidad === null || precio === null) return [null, "Revisa los objetos: cada uno necesita nombre, cantidad y precio"];
     const enc = Array.isArray(o.encantamientos) ? o.encantamientos.map(e => texto(e, 40)).filter(Boolean).slice(0, 15) : [];
-    objs.push({ nombre, cantidad, precio, encantamientos: enc });
+    const [img, err] = leerImagenSubida(o.imagen);
+    if (err) return [null, err];
+    objs.push({ nombre, cantidad, precio, encantamientos: enc, img });
   }
-  return objs;
+  return [objs, null];
 }
 
 export async function crear(env, u, d) {
   const tipo = TIPOS.includes(d.tipo) ? d.tipo : null;
   if (!tipo) return [400, { error: "Tipo de anuncio no válido" }];
-  const categoria = CATEGORIAS.includes(d.categoria) ? d.categoria : null;
-  if (!categoria) return [400, { error: "Categoría no válida" }];
-  const objetos = leerObjetos(d, tipo !== "subasta");
-  if (!objetos) return [400, { error: "Revisa los objetos: cada uno necesita nombre, cantidad y precio" }];
-  const titulo = texto(d.titulo, 80) || objetos[0].nombre;
-  const imagen = texto(d.imagen, 500);
-  if (imagen && !/^https:\/\/\S+$/.test(imagen)) return [400, { error: "La imagen tiene que ser un enlace https" }];
+  const categoria = "otros"; // ya no se usan categorías
+  const [objetos, errObj] = leerObjetos(d, tipo !== "subasta");
+  if (errObj) return [400, { error: errObj }];
   const descripcion = texto(d.descripcion, 1000);
   const ahora = Date.now();
-  let precio, minima = 1, fin = null;
+  let precio, minima = 1, fin = null; // puja mínima: siempre 1 moneda más que la anterior
   if (tipo === "subasta") {
     precio = entero(d.precio, 1, MAX_MONEDAS);
-    minima = entero(d.puja_minima ?? 1, 1, MAX_MONEDAS);
     const dur = entero(d.duracion_min, 1, 7 * 24 * 60); // duración en minutos (hasta 7 días)
     if (precio === null) return [400, { error: "Falta el precio de salida" }];
-    if (minima === null) return [400, { error: "Puja mínima no válida" }];
     if (dur === null) return [400, { error: "Duración no válida" }];
     fin = ahora + dur * 60000;
   } else {
@@ -119,9 +124,28 @@ export async function crear(env, u, d) {
   }
   const abiertos = await env.DB.prepare("SELECT COUNT(*) AS n FROM anuncios WHERE autor_id = ?1 AND estado = 'abierto'").bind(u.id).first();
   if (abiertos.n >= 30) return [400, { error: "Tienes demasiados anuncios abiertos (30)" }];
+  // Sin nombre: con un objeto, el nombre del objeto; con varios, «Anuncio Venta N» / «Anuncio Compra N»
+  // (subasta: «Anuncio Subasta N», PROVISIONAL), con un contador global que nunca se repite.
+  let titulo = texto(d.titulo, 80);
+  if (!titulo && objetos.length === 1) titulo = objetos[0].nombre;
+  if (!titulo) {
+    const c = await env.DB.prepare("UPDATE contadores SET valor = valor + 1 WHERE clave = 'anuncio_sin_nombre' RETURNING valor").first();
+    titulo = `Anuncio ${{ vendo: "Venta", busco: "Compra", subasta: "Subasta" }[tipo]} ${c.valor}`;
+  }
+  // Cada objeto puede llevar su imagen: se guarda en la tabla imagenes y el objeto se queda con su dirección.
+  for (const o of objetos) {
+    if (o.img) {
+      const bin = Uint8Array.from(atob(o.img.b64), c => c.charCodeAt(0));
+      const ri = await env.DB.prepare("INSERT INTO imagenes (tipo, datos, autor_id, creado) VALUES (?1,?2,?3,?4)")
+        .bind(o.img.tipo, bin.buffer, u.id, ahora).run();
+      o.imagen = "/api/imagen/" + ri.meta.last_row_id;
+    }
+    delete o.img;
+  }
+  const imagen = (objetos.find(o => o.imagen) || {}).imagen || null; // la de la tarjeta: la del primer objeto que tenga
   const r = await env.DB.prepare(
     "INSERT INTO anuncios (tipo, autor_id, titulo, categoria, imagen, descripcion, objetos, precio, puja_minima, fin, creado) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)"
-  ).bind(tipo, u.id, titulo, categoria, imagen || null, descripcion, JSON.stringify(objetos), precio, minima, fin, ahora).run();
+  ).bind(tipo, u.id, titulo, categoria, imagen, descripcion, JSON.stringify(objetos), precio, minima, fin, ahora).run();
   return [201, { id: r.meta.last_row_id }];
 }
 
@@ -267,11 +291,11 @@ async function numeroRecibo(env, anuncio) {
 
 export async function datosRecibo(env, numero) {
   const r = await env.DB.prepare(
-    `SELECT r.*, c.nombre AS comprador, v.nombre AS vendedor, a.imagen FROM recibos r
+    `SELECT r.*, c.nombre AS comprador, v.nombre AS vendedor, a.objetos AS objetos_anuncio FROM recibos r
      LEFT JOIN usuarios c ON c.id = r.comprador_id LEFT JOIN usuarios v ON v.id = r.vendedor_id
      LEFT JOIN anuncios a ON a.id = r.anuncio_id WHERE r.numero = ?1`).bind(Number(numero)).first();
   if (!r) return null;
-  // r.imagen: imagen del objeto. No va dentro del recibo; se manda adjunta junto a él (paso 4, bot).
+  // Las imágenes de los objetos no van dentro del recibo: se mandan adjuntas en el mismo mensaje.
   return { ...r, datos: { numero: r.numero, tipo: NOMBRE_TIPO[r.tipo], comprador: r.comprador || "?", vendedor: r.vendedor || "?",
     fecha: r.fecha, objetos: JSON.parse(r.objetos) } };
 }
@@ -304,11 +328,17 @@ export async function enviarRecibo(env, numero) {
   const r = await datosRecibo(env, numero);
   const nombre = `recibo-${String(numero).padStart(4, "0")}.png`;
   const fotos = [];
-  if (r.imagen) try {
-    const f = await fetch(r.imagen);
-    const tipo = f.headers.get("Content-Type") || "";
-    if (f.ok && tipo.startsWith("image/")) fotos.push({ nombre: "objeto." + (tipo.split("/")[1].split(";")[0] || "png"), tipo, datos: await f.arrayBuffer() });
-  } catch {}
+  // Una foto por objeto que la tenga, con el nombre del objeto como nombre de archivo.
+  for (const [i, o] of JSON.parse(r.objetos_anuncio || "[]").entries()) {
+    if (!o.imagen) continue;
+    try {
+      const f = await leerImagen(env, o.imagen.split("/").pop());
+      if (!f) continue;
+      const ext = f.tipo.split("/")[1] === "jpeg" ? "jpg" : f.tipo.split("/")[1];
+      const base = o.nombre.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "objeto";
+      fotos.push({ nombre: `${i + 1}-${base}.${ext}`, tipo: f.tipo, datos: f.datos });
+    } catch {}
+  }
   const titulo = (await env.DB.prepare("SELECT titulo FROM anuncios WHERE id = ?1").bind(r.anuncio_id).first())?.titulo || "";
   const n = `#${String(numero).padStart(4, "0")}`;
   // Cada uno recibe su versión: el comprador «Compra» (o «Subasta»), el vendedor «Venta».
@@ -346,3 +376,9 @@ export async function imagenRecibo(env, u, numero) {
 // «TIPO DE VENTA» según quién lo recibe: Compra / Subasta para el comprador, Venta para el vendedor.
 export const paraLado = (r, lado) =>
   ({ ...r.datos, tipo: lado === "vendedor" ? "Venta" : r.tipo === "subasta" ? "Subasta" : "Compra" });
+
+// Imágenes subidas con los anuncios (se sirven en /api/imagen/ID)
+export async function leerImagen(env, id) {
+  const r = await env.DB.prepare("SELECT tipo, datos FROM imagenes WHERE id = ?1").bind(Number(id)).first();
+  return r ? { tipo: r.tipo, datos: new Uint8Array(r.datos) } : null;
+}

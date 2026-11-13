@@ -349,20 +349,61 @@ button.opcion-voto:hover { border-color: var(--acento); }
 .ventana-merc .precio-grande { font-size: 1.6rem; font-weight: 800; color: var(--acento); }
 .ventana-merc .votante { justify-content: space-between; }
 .ventana-merc .votante .aceptar { margin: 0 0 0 auto; padding: 6px 14px; }
-.form-anuncio { text-align: left; max-width: 640px; max-height: 90vh; overflow-y: auto; border: 0; padding: 0; background: transparent; }
+.form-anuncio { text-align: left; max-width: 640px; border: 0; padding: 0; background: transparent; }
 .form-anuncio h2 { text-align: center; }
 .tipos-anuncio { margin: 0; border-bottom: 1px solid var(--borde); }
 .tipos-anuncio label { margin: 0; font-weight: 600; cursor: pointer; }
 .tipos-anuncio input { display: none; }
 .tipos-anuncio span { display: block; padding: 9px 16px; border-radius: 10px 10px 0 0; color: var(--suave); border: 1px solid transparent; border-bottom: 0; }
 .tipos-anuncio input:checked + span { background: var(--fondo); color: var(--texto); border-color: var(--borde); }
-.fila-obj { display: grid; grid-template-columns: 1fr 70px 90px 22px; gap: 6px; margin-bottom: 8px; align-items: center; }
-.fila-obj .ancha { grid-column: 1 / 4; }
-.fila-obj .solo-precio.oculto ~ .ancha, .fila-obj:has(.solo-precio.oculto) { grid-template-columns: 1fr 70px 22px; }
-.fila-obj:has(.solo-precio.oculto) .ancha { grid-column: 1 / 3; }
-.quitar-obj { color: var(--suave); text-decoration: none; text-align: center; }
-.quitar-obj:hover { color: #ff8a89; }
-.mas-obj { font-size: .9rem; font-weight: 600; }
 .form-anuncio .horas { grid-template-columns: 1fr 1fr 1fr; }
 .total-anuncio { font-weight: 700; color: var(--acento); margin: 10px 0 0; }
 @media (max-width: 600px) { .filtros { width: 100%; } .filtros select { flex: 1; } .form-anuncio .horas { grid-template-columns: 1fr; } }
+/* Mercadillo v2: objetos en cajas, imagen subida y buscador */
+.form-anuncio label small { color: var(--suave); font-weight: 400; }
+.obj { background: var(--fondo); border: 1px solid var(--borde); border-radius: 10px; padding: 4px 14px 14px; margin-top: 12px; }
+.obj-cab { display: flex; justify-content: space-between; align-items: center; min-height: 6px; }
+.obj-cab b { color: var(--suave); font-size: .8rem; letter-spacing: 1px; text-transform: uppercase; padding-top: 8px; }
+.obj-cab .quitar-obj { color: var(--suave); font-size: .82rem; padding-top: 8px; }
+.obj-cab .quitar-obj:hover { color: #ff8a89; }
+.obj-campos { display: grid; grid-template-columns: 1fr 90px 130px; gap: 10px; }
+.obj-campos:has(.c-precio.oculto) { grid-template-columns: 1fr 90px; }
+.obj input { background: var(--panel); }
+.mas-obj { width: 100%; margin: 10px 0 0; background: transparent; color: var(--acento); border: 2px dashed var(--borde); font-weight: 700; font-size: .95rem; padding: 10px; }
+.mas-obj:hover { border-color: var(--acento); filter: none; }
+.subir-img { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 110px; border: 2px dashed var(--borde); border-radius: 10px; background: var(--fondo); cursor: pointer; overflow: hidden; font-weight: 400; color: var(--suave); text-align: center; padding: 10px; }
+.subir-img:hover, .subir-img.encima { border-color: var(--acento); color: var(--texto); }
+.subir-img input { display: none; }
+.subir-img i { font-size: 1.4rem; vertical-align: -4px; margin-right: 4px; }
+.subir-img img { max-height: 200px; max-width: 100%; border-radius: 6px; }
+.quitar-img { display: inline-block; margin-top: 6px; font-size: .85rem; color: var(--suave); }
+.filtros .buscar { margin: 0; position: relative; font-weight: 400; }
+.filtros .buscar i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--suave); }
+.filtros .buscar input { width: 210px; padding: 8px 10px 8px 32px; }
+@media (max-width: 600px) { .obj-campos { grid-template-columns: 1fr 1fr; } .obj-campos .c-nombre { grid-column: 1 / -1; } .filtros .buscar, .filtros .buscar input { width: 100%; } }
+.ventana-merc:has(.form-anuncio) { max-width: 640px; }
+/* Mercadillo v3: sin scroll en la ventana e imagen por objeto */
+.fondo-fuera.con-scroll { overflow-y: auto; align-items: flex-start; padding: 32px 16px; }
+.obj-fila { display: flex; gap: 12px; align-items: flex-start; }
+.obj-datos { flex: 1; min-width: 0; }
+.subir-img.mini { flex: none; width: 92px; height: 92px; min-height: 0; margin-top: 30px; padding: 4px; flex-direction: column; }
+.subir-img.mini .sin-img { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .78rem; }
+.subir-img.mini i { margin: 0; }
+.subir-img.mini img { width: 100%; height: 100%; max-height: none; object-fit: cover; }
+.form-anuncio .horas.dos { grid-template-columns: 1fr 1fr; }
+@media (max-width: 600px) { .obj-fila { flex-direction: column; } .subir-img.mini { margin-top: 8px; } }
+/* Mercadillo v4: caja de objeto con el mismo margen arriba y abajo, imagen centrada */
+.obj { padding: 14px; }
+.obj-cab { margin-bottom: 8px; min-height: 0; }
+.obj-cab b, .obj-cab .quitar-obj { padding-top: 0; }
+.obj-fila { align-items: center; }
+.subir-img.mini { margin-top: 0; position: relative; }
+.subir-img.mini .quitar-img { position: absolute; top: 4px; right: 4px; margin: 0; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,.7); color: #fff; text-decoration: none; font-size: .75rem; display: flex; align-items: center; justify-content: center; }
+.subir-img.mini .quitar-img:hover { background: #e24b4a; }
+/* Mercadillo v5: sin flechitas en los números y papelera para quitar un objeto */
+.form-anuncio input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.form-anuncio input[type=number]::-webkit-inner-spin-button, .form-anuncio input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.obj-cab .quitar-obj { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--borde); color: var(--suave); text-decoration: none; font-size: 1rem; }
+.obj-cab .quitar-obj:hover { border-color: #e24b4a; color: #ff8a89; background: rgba(226,75,74,.1); }
+.obj-cab .quitar-obj { border: 0; background: none; width: auto; height: auto; color: var(--suave); }
+.obj-cab .quitar-obj:hover { border: 0; background: none; color: #ff6b6a; }
