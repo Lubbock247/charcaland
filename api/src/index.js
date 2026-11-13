@@ -1,5 +1,6 @@
 // API de Charcaland: cuentas con Discord, roles y saldo.
 import { reciboPng } from "./recibo.js";
+import * as merc from "./mercadillo.js";
 // Cada petición lleva el token de Discord del usuario; aquí se comprueba
 // con Discord que es válido y que se creó para ESTA aplicación.
 
@@ -17,7 +18,17 @@ function cors(env, req) {
 const json = (datos, estado, cab) =>
   new Response(JSON.stringify(datos), { status: estado || 200, headers: { "Content-Type": "application/json", ...cab } });
 
+// Solo para probar en local: con PRUEBAS_LOCAL=1 en .dev.vars (nunca se sube) y la API en 127.0.0.1,
+// la cabecera X-Prueba-Usuario hace de usuario sin pasar por Discord.
+const esLocal = (req, env) => env.PRUEBAS_LOCAL === "1" && new URL(req.url).hostname === "127.0.0.1";
+
 async function usuarioDe(req, env) {
+  const prueba = esLocal(req, env) && req.headers.get("X-Prueba-Usuario");
+  if (prueba) {
+    await env.DB.prepare("INSERT INTO usuarios (id, nombre) VALUES (?1, ?1) ON CONFLICT(id) DO NOTHING").bind(prueba).run();
+    const f = await env.DB.prepare("SELECT id, nombre, avatar, saldo FROM usuarios WHERE id = ?1").bind(prueba).first();
+    return { ...f, rol: prueba.startsWith("admin") ? "admin" : "usuario" };
+  }
   const auth = req.headers.get("Authorization") || "";
   if (!auth.startsWith("Bearer ")) return null;
   const r = await fetch("https://discord.com/api/oauth2/@me", { headers: { Authorization: auth } });
@@ -359,14 +370,19 @@ async function enviarSugerencia(env, u, d) {
 }
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const cab = cors(env, req);
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cab });
     const ruta = new URL(req.url).pathname;
+    const local = esLocal(req, env) && req.headers.get("X-Prueba-Usuario");
     try {
       // Foto de prueba del recibo: solo en local (wrangler dev).
       if (ruta === "/api/recibo-prueba" && new URL(req.url).hostname === "127.0.0.1") {
-        const png = await reciboPng({ numero: 1, tipo: "Vendo", comprador: "Steve", vendedor: "Alex", fecha: Date.now(), objetos: [
+        const tipo = new URL(req.url).searchParams.get("tipo") || "Compra";
+        if (tipo === "Subasta") return new Response(await reciboPng({ numero: 3, tipo, comprador: "Steve", vendedor: "Alex", fecha: Date.now(), objetos: [
+          { nombre: "Lote de libros", cantidad: 1, precio: 70, encantamientos: ["2× Libro encantado (Reparación)", "1× Libro encantado (Afilado V)"] }] }),
+          { headers: { "Content-Type": "image/png" } });
+        const png = await reciboPng({ numero: 1, tipo, comprador: "Steve", vendedor: "Alex", fecha: Date.now(), objetos: [
           { nombre: "Pico de diamante", cantidad: 1, precio: 150, encantamientos: ["Eficiencia V", "Irrompibilidad III", "Fortuna III"] },
           { nombre: "Manzana dorada", cantidad: 8, precio: 12 },
           { nombre: "Libro encantado", cantidad: 2, precio: 75, encantamientos: ["Reparación"] }] });
@@ -425,10 +441,46 @@ export default {
         const [est, cuerpo] = await enviarSugerencia(env, u, await req.json());
         return json(cuerpo, est, cab);
       }
+      // ---- Mercadillo ----
+      if (ruta === "/api/mercadillo" && req.method === "GET") {
+        const u = req.headers.get("Authorization") || local ? await usuarioDe(req, env) : null;
+        return json(await merc.listar(env, u && !u.fuera ? u : null), 200, cab);
+      }
+      const mc = ruta.match(/^\/api\/mercadillo(?:\/(\d+)(?:\/(comprar|pujar|lotengo|aceptar))?)?$/);
+      const otras = ["/api/movimientos", "/api/monedas", "/api/usuarios"].includes(ruta) || /^\/api\/recibo\/\d+\.png$/.test(ruta);
+      if (mc || otras) {
+        const [u, error] = await miembroDe(req, env, cab);
+        if (error) return error;
+        const cuerpo = () => req.method === "POST" ? req.json().catch(() => ({})) : {};
+        let res = null;
+        if (mc && !mc[1] && req.method === "POST") res = await merc.crear(env, u, await cuerpo());
+        else if (mc && mc[1] && !mc[2] && req.method === "DELETE") res = await merc.quitar(env, u, mc[1]);
+        else if (mc && mc[2] === "comprar" && req.method === "POST") res = await merc.comprar(env, u, mc[1]);
+        else if (mc && mc[2] === "lotengo" && req.method === "POST") res = await merc.loTengo(env, u, mc[1]);
+        else if (mc && mc[2] === "aceptar" && req.method === "POST") res = await merc.aceptar(env, u, mc[1], await cuerpo());
+        else if (mc && mc[2] === "pujar" && req.method === "POST") res = await merc.pujar(env, u, mc[1], await cuerpo());
+        else if (ruta === "/api/movimientos" && req.method === "GET") res = await merc.movimientos(env, u, new URL(req.url));
+        else if (ruta === "/api/monedas" && req.method === "POST") res = await merc.darMonedas(env, u, await cuerpo());
+        else if (ruta === "/api/usuarios" && req.method === "GET") res = await merc.usuarios(env, u);
+        else if (ruta.startsWith("/api/recibo/") && req.method === "GET") {
+          const png = await merc.imagenRecibo(env, u, ruta.match(/\d+/)[0]);
+          if (png === null) return json({ error: "No existe ese recibo" }, 404, cab);
+          if (png === false) return json({ error: "Ese recibo no es tuyo" }, 403, cab);
+          return new Response(png, { headers: { "Content-Type": "image/png", ...cab } });
+        }
+        // Tras una compra, el recibo se manda por Discord sin hacer esperar al comprador.
+        if (res && res[1].recibo) ctx.waitUntil(merc.enviarRecibo(env, res[1].recibo));
+        if (res) return json(res[1], res[0], cab);
+      }
       return json({ error: "No existe" }, 404, cab);
     } catch (e) {
       console.error(e);
       return json({ error: "Error del servidor" }, 500, cab);
     }
+  },
+  // Cron Trigger (cada minuto): cierra las subastas que han terminado.
+  async scheduled(evento, env, ctx) {
+    // Cierra subastas y manda los recibos pendientes (los de subastas y los que fallaron).
+    ctx.waitUntil(merc.cerrarSubastas(env).then(() => merc.enviarPendientes(env)));
   },
 };

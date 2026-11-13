@@ -31,6 +31,12 @@ Estado: **solo diseño hablado y librerías descargadas.** No hay nada programad
 - npm: `satori`, `satori-html`, `@resvg/resvg-wasm` (en `api/package.json`).
 - Fuentes: `api/src/fuentes/nunito-400.ttf` y `nunito-800.ttf` (fontsource, Nunito 5.1.0).
 
+## Estado de la API (12/11/2026)
+- Hecha en `api/src/mercadillo.js` y tablas en `api/mercadillo.sql` (aún **sin aplicar** en la base de datos real ni desplegada).
+- Probado en local con usuarios de prueba: comprar, Busco («Lo tengo» + «Aceptar»), pujar, devolución al superar la puja, prórroga de 30 s, cierre por Cron, monedas de admin con motivo, no quedar en negativo, recibos PNG (solo comprador, vendedor y admins).
+- La imagen del objeto se guarda con el anuncio y sale en los datos del recibo para mandarla **adjunta** (no dentro del recibo).
+- Provisional: en la subasta el recibo pone el lote en una sola línea con los objetos debajo.
+
 ## Orden para seguir
 1. Plantilla del recibo y una foto de prueba para enseñársela al usuario.
 2. Base de datos y API del mercadillo (anuncios, pujas, movimientos de monedas, recibos).
