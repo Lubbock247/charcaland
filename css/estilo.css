@@ -407,3 +407,94 @@ button.opcion-voto:hover { border-color: var(--acento); }
 .obj-cab .quitar-obj:hover { border-color: #e24b4a; color: #ff8a89; background: rgba(226,75,74,.1); }
 .obj-cab .quitar-obj { border: 0; background: none; width: auto; height: auto; color: var(--suave); }
 .obj-cab .quitar-obj:hover { border: 0; background: none; color: #ff6b6a; }
+/* Mercadillo v6: tarjeta nueva, botones del dueño, modo pruebas */
+.anuncio .foto { height: 150px; }
+.anuncio .mis-botones { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; }
+.anuncio .mis-botones a { width: 32px; height: 32px; border-radius: 8px; background: rgba(15,17,23,.82); color: var(--texto); display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.05rem; }
+.anuncio .mis-botones a:hover { color: var(--acento); }
+.anuncio .mis-botones a[data-quitar]:hover { color: #ff6b6a; }
+.anuncio .cuenta { position: absolute; bottom: 8px; right: 8px; background: rgba(15,17,23,.85); color: #f0c05a; font-size: .8rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; }
+.anuncio .cuenta i { vertical-align: -2px; }
+.anuncio .cuerpo { gap: 2px; padding: 12px 16px 10px; }
+.anuncio .num { color: var(--suave); font-size: .75rem; font-weight: 700; letter-spacing: 1px; }
+.anuncio h3 { font-size: 1.1rem; line-height: 1.3; }
+.lista-objs { list-style: none; margin: 8px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.lista-objs li { display: flex; align-items: center; gap: 8px; font-size: .9rem; line-height: 1.25; }
+.lista-objs img, .lista-objs i { flex: none; width: 28px; height: 28px; border-radius: 6px; object-fit: cover; background: var(--panel2); display: flex; align-items: center; justify-content: center; color: var(--suave); font-size: 1rem; }
+.lista-objs .n { color: var(--acento); font-weight: 700; min-width: 30px; }
+.lista-objs .o small { display: block; color: var(--suave); font-size: .76rem; }
+.anuncio .quien { margin-top: auto; padding-top: 8px; color: var(--suave); }
+.pie-anuncio { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px 14px; border-top: 1px solid var(--borde); }
+.pie-anuncio .precio { margin: 0; font-size: 1.15rem; line-height: 1.2; }
+.pie-anuncio .detalle { color: var(--suave); font-size: .78rem; }
+.pie-anuncio button { margin: 0; padding: 9px 16px; font-size: .92rem; white-space: nowrap; }
+.pie-anuncio button.hecho { background: var(--panel2); color: var(--texto); }
+.pie-anuncio button:disabled { background: var(--panel2); color: var(--suave); cursor: default; filter: none; }
+.pie-anuncio .ganando { color: #f0c05a; font-weight: 700; font-size: .88rem; white-space: nowrap; }
+.tipos-anuncio.fijo input:disabled + span { opacity: .35; cursor: default; }
+.barra-pruebas { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; padding: 10px 12px; border: 1px dashed #d9a43a; border-radius: 10px; background: rgba(217,164,58,.06); }
+.barra-pruebas .interruptor { margin: 0; flex: 1; min-width: 260px; background: transparent; border: 0; padding: 0; }
+.barra-pruebas .btn { margin: 0; padding: 8px 14px; }
+.form-monedas { text-align: left; border: 0; padding: 0; background: transparent; }
+.form-monedas h2 { text-align: center; }
+.anuncio .foto .mis-botones i, .anuncio .foto .cuenta i { font-size: inherit; color: inherit; }
+/* Mercadillo v7: tarjeta sin imagen (se pulsa para ver el detalle) y vista detallada */
+.anuncio[data-ver] { cursor: pointer; transition: border-color .15s, transform .15s; }
+.anuncio[data-ver]:hover { border-color: var(--acento); transform: translateY(-2px); }
+.cab-anuncio { display: flex; align-items: center; gap: 8px; padding: 12px 14px 0 16px; min-height: 44px; }
+.cab-anuncio .etiqueta { margin: 0; }
+.cab-anuncio .cuenta { color: #f0c05a; font-size: .8rem; font-weight: 700; }
+.cab-anuncio .cuenta i { vertical-align: -2px; }
+.cab-anuncio .mis-botones { margin-left: auto; display: flex; gap: 2px; }
+.cab-anuncio .mis-botones a { width: 30px; height: 30px; border-radius: 8px; color: var(--suave); display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.1rem; }
+.cab-anuncio .mis-botones a:hover { color: var(--texto); background: var(--panel2); }
+.cab-anuncio .mis-botones a[data-quitar]:hover { color: #ff6b6a; background: rgba(226,75,74,.1); }
+.anuncio .cuerpo { padding: 8px 16px 10px; }
+.lista-objs li.mas { color: var(--suave); font-size: .82rem; }
+.ventana-merc.ancha { max-width: 620px; text-align: left; }
+.detalle-anuncio .cab-anuncio { padding: 0; }
+.detalle-anuncio h2 { margin: 10px 0 4px; }
+.detalle-anuncio .quien { display: flex; align-items: center; gap: 8px; color: var(--suave); margin-bottom: 14px; }
+.detalle-anuncio .quien .avatar { width: 24px; height: 24px; border-width: 1px; }
+.det-objs { display: flex; flex-direction: column; gap: 10px; }
+.det-obj { display: flex; gap: 14px; align-items: center; background: var(--fondo); border: 1px solid var(--borde); border-radius: 10px; padding: 10px; }
+.det-img { flex: none; width: 110px; height: 110px; border-radius: 8px; overflow: hidden; background: var(--panel); display: flex; align-items: center; justify-content: center; }
+.det-img img { width: 100%; height: 100%; object-fit: cover; }
+a.det-img:hover { outline: 2px solid var(--acento); }
+.det-img.vacia i { font-size: 2.4rem; color: var(--suave); }
+.det-datos b { font-size: 1.05rem; }
+.det-datos .cant { color: var(--acento); }
+.det-datos .encs { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0; }
+.det-datos .encs span { background: #2b2150; color: #d6c9ff; font-size: .78rem; padding: 2px 8px; border-radius: 99px; }
+.det-precio { color: var(--suave); font-size: .85rem; margin-top: 6px; }
+.det-desc { white-space: pre-wrap; color: var(--texto); margin: 14px 0 0; }
+.detalle-anuncio .pie-anuncio { padding: 14px 0 0; margin-top: 14px; }
+.detalle-anuncio .pie-anuncio .precio { font-size: 1.4rem; }
+.det-cerrar { margin: 14px 0 0 !important; }
+.ventana-merc.solo-img { max-width: 92vw; padding: 8px; background: transparent; border: 0; }
+.img-grande { max-width: 100%; max-height: 86vh; border-radius: 8px; display: block; margin: 0 auto; }
+@media (max-width: 600px) { .det-img { width: 80px; height: 80px; } }
+.anuncio .cab-anuncio .cuenta, .anuncio .cab-anuncio .mis-botones { position: static; background: none; padding: 0; }
+.anuncio .cab-anuncio .mis-botones a { background: none; }
+.anuncio .cab-anuncio .mis-botones a:hover { background: var(--panel2); }
+.anuncio .cab-anuncio .mis-botones a[data-quitar]:hover { background: rgba(226,75,74,.1); }
+.pie-anuncio .precio { color: var(--acento); font-weight: 800; }
+/* Mercadillo v8: detalle con la imagen debajo de cada objeto, e Inicio por secciones */
+.det-obj { display: block; padding: 12px 14px; }
+.det-fila { display: flex; align-items: baseline; gap: 8px; }
+.det-cant { color: var(--acento); font-weight: 800; min-width: 34px; }
+.det-nombre { font-size: 1.05rem; flex: 1; }
+.det-obj .det-precio { margin: 0; color: var(--texto); font-weight: 700; white-space: nowrap; }
+.det-obj .encs { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 0 42px; }
+.det-obj .encs span { background: #2b2150; color: #d6c9ff; font-size: .78rem; padding: 2px 9px; border-radius: 99px; }
+.det-obj .det-img { display: block; width: auto; height: auto; margin: 12px 0 0; background: #0f1117; border-radius: 8px; text-align: center; overflow: hidden; }
+.det-obj .det-img img { width: auto; max-width: 100%; height: auto; max-height: 280px; object-fit: contain; display: block; margin: 0 auto; }
+a.det-img:hover { outline: 2px solid var(--acento); }
+.detalle-anuncio h2 { font-size: 1.5rem; }
+.detalle-anuncio .det-desc { background: var(--fondo); border-left: 3px solid var(--acento); padding: 8px 12px; border-radius: 0 8px 8px 0; color: var(--suave); }
+.seccion-merc { margin-bottom: 26px; }
+.seccion-cab { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.seccion-cab h2 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 6px; }
+.seccion-cab h2 i { color: var(--acento); }
+.seccion-cab a { font-size: .9rem; font-weight: 600; text-decoration: none; }
+.det-obj .det-img img { max-height: 200px; }

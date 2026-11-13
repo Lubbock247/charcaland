@@ -71,7 +71,7 @@ async function api(ruta, opciones) {
   try { t = localStorage.getItem("dc_token"); } catch {}
   const r = await fetch(CONFIG.api + ruta, {
     ...opciones,
-    headers: { "Content-Type": "application/json", ...(t ? { Authorization: "Bearer " + t } : {}) },
+    headers: { "Content-Type": "application/json", ...(t ? { Authorization: "Bearer " + t } : {}), ...(opciones && opciones.headers) },
   });
   let datos = {};
   try { datos = await r.json(); } catch {}

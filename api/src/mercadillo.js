@@ -79,9 +79,13 @@ export async function listar(env, u) {
 }
 
 // ---- Crear y quitar ----
-// Imagen subida desde la web: llega ya reducida como data URL.
+// Número de anuncio: es su id con 4 cifras. El recibo de ese anuncio lleva el mismo número.
+export const numeroAnuncio = id => "#" + String(id).padStart(4, "0");
+
+// Imagen de un objeto: una nueva (data URL ya reducida en el navegador) o una ya guardada ("/api/imagen/N").
 function leerImagenSubida(v) {
   if (!v) return [null, null];
+  if (/^\/api\/imagen\/\d+$/.test(String(v))) return [{ ya: String(v) }, null];
   const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(v));
   if (!m) return [null, "Una de las imágenes no es válida"];
   if (m[2].length > 700000) return [null, "Una de las imágenes es demasiado grande"];
@@ -103,38 +107,11 @@ function leerObjetos(d, conPrecio) {
   return [objs, null];
 }
 
-export async function crear(env, u, d) {
-  const tipo = TIPOS.includes(d.tipo) ? d.tipo : null;
-  if (!tipo) return [400, { error: "Tipo de anuncio no válido" }];
-  const categoria = "otros"; // ya no se usan categorías
-  const [objetos, errObj] = leerObjetos(d, tipo !== "subasta");
-  if (errObj) return [400, { error: errObj }];
-  const descripcion = texto(d.descripcion, 1000);
-  const ahora = Date.now();
-  let precio, minima = 1, fin = null; // puja mínima: siempre 1 moneda más que la anterior
-  if (tipo === "subasta") {
-    precio = entero(d.precio, 1, MAX_MONEDAS);
-    const dur = entero(d.duracion_min, 1, 7 * 24 * 60); // duración en minutos (hasta 7 días)
-    if (precio === null) return [400, { error: "Falta el precio de salida" }];
-    if (dur === null) return [400, { error: "Duración no válida" }];
-    fin = ahora + dur * 60000;
-  } else {
-    precio = objetos.reduce((s, o) => s + o.cantidad * o.precio, 0);
-    if (precio < 1 || precio > MAX_MONEDAS) return [400, { error: "El precio total tiene que ser de al menos 1 moneda" }];
-  }
-  const abiertos = await env.DB.prepare("SELECT COUNT(*) AS n FROM anuncios WHERE autor_id = ?1 AND estado = 'abierto'").bind(u.id).first();
-  if (abiertos.n >= 30) return [400, { error: "Tienes demasiados anuncios abiertos (30)" }];
-  // Sin nombre: con un objeto, el nombre del objeto; con varios, «Anuncio Venta N» / «Anuncio Compra N»
-  // (subasta: «Anuncio Subasta N», PROVISIONAL), con un contador global que nunca se repite.
-  let titulo = texto(d.titulo, 80);
-  if (!titulo && objetos.length === 1) titulo = objetos[0].nombre;
-  if (!titulo) {
-    const c = await env.DB.prepare("UPDATE contadores SET valor = valor + 1 WHERE clave = 'anuncio_sin_nombre' RETURNING valor").first();
-    titulo = `Anuncio ${{ vendo: "Venta", busco: "Compra", subasta: "Subasta" }[tipo]} ${c.valor}`;
-  }
-  // Cada objeto puede llevar su imagen: se guarda en la tabla imagenes y el objeto se queda con su dirección.
+// Guarda las imágenes nuevas y deja en cada objeto solo su dirección.
+async function guardarImagenes(env, u, objetos, ahora) {
   for (const o of objetos) {
-    if (o.img) {
+    if (o.img && o.img.ya) o.imagen = o.img.ya;
+    else if (o.img) {
       const bin = Uint8Array.from(atob(o.img.b64), c => c.charCodeAt(0));
       const ri = await env.DB.prepare("INSERT INTO imagenes (tipo, datos, autor_id, creado) VALUES (?1,?2,?3,?4)")
         .bind(o.img.tipo, bin.buffer, u.id, ahora).run();
@@ -142,11 +119,64 @@ export async function crear(env, u, d) {
     }
     delete o.img;
   }
-  const imagen = (objetos.find(o => o.imagen) || {}).imagen || null; // la de la tarjeta: la del primer objeto que tenga
+  return (objetos.find(o => o.imagen) || {}).imagen || null; // la de la tarjeta: la del primer objeto que tenga
+}
+
+// Lo que comparten crear y editar: objetos, precio, subasta y nombre.
+function leerAnuncio(d, tipo) {
+  const [objetos, errObj] = leerObjetos(d, tipo !== "subasta");
+  if (errObj) return [null, errObj];
+  const r = { objetos, descripcion: texto(d.descripcion, 1000), titulo: texto(d.titulo, 80) };
+  if (tipo === "subasta") {
+    r.precio = entero(d.precio, 1, MAX_MONEDAS);
+    if (r.precio === null) return [null, "Falta el precio de salida"];
+  } else {
+    r.precio = objetos.reduce((s, o) => s + o.cantidad * o.precio, 0);
+    if (r.precio < 1 || r.precio > MAX_MONEDAS) return [null, "El precio total tiene que ser de al menos 1 moneda"];
+  }
+  // Sin nombre: con un objeto, el del objeto; con varios, «Anuncio #0001» (se pone al saber el número).
+  if (!r.titulo && objetos.length === 1) r.titulo = objetos[0].nombre;
+  return [r, null];
+}
+
+export async function crear(env, u, d) {
+  const tipo = TIPOS.includes(d.tipo) ? d.tipo : null;
+  if (!tipo) return [400, { error: "Tipo de anuncio no válido" }];
+  const [a, err] = leerAnuncio(d, tipo);
+  if (err) return [400, { error: err }];
+  const ahora = Date.now();
+  let fin = null; // puja mínima: siempre 1 moneda más que la anterior
+  if (tipo === "subasta") {
+    const dur = entero(d.duracion_min, 1, 7 * 24 * 60); // duración en minutos (hasta 7 días)
+    if (dur === null) return [400, { error: "Duración no válida" }];
+    fin = ahora + dur * 60000;
+  }
+  const abiertos = await env.DB.prepare("SELECT COUNT(*) AS n FROM anuncios WHERE autor_id = ?1 AND estado = 'abierto'").bind(u.id).first();
+  if (abiertos.n >= 30) return [400, { error: "Tienes demasiados anuncios abiertos (30)" }];
+  const imagen = await guardarImagenes(env, u, a.objetos, ahora);
   const r = await env.DB.prepare(
-    "INSERT INTO anuncios (tipo, autor_id, titulo, categoria, imagen, descripcion, objetos, precio, puja_minima, fin, creado) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)"
-  ).bind(tipo, u.id, titulo, categoria, imagen, descripcion, JSON.stringify(objetos), precio, minima, fin, ahora).run();
-  return [201, { id: r.meta.last_row_id }];
+    "INSERT INTO anuncios (tipo, autor_id, titulo, categoria, imagen, descripcion, objetos, precio, puja_minima, fin, creado) VALUES (?1,?2,?3,'otros',?4,?5,?6,?7,1,?8,?9)"
+  ).bind(tipo, u.id, a.titulo, imagen, a.descripcion, JSON.stringify(a.objetos), a.precio, fin, ahora).run();
+  const id = r.meta.last_row_id;
+  if (!a.titulo) await env.DB.prepare("UPDATE anuncios SET titulo = ?1, version = 1 WHERE id = ?2").bind("Anuncio " + numeroAnuncio(id), id).run();
+  return [201, { id }];
+}
+
+// Editar: solo quien lo puso (o un admin), mientras siga abierto. Una subasta con pujas ya no se cambia.
+// El tipo no se cambia; en la subasta tampoco la hora de fin.
+export async function editar(env, u, id, d) {
+  const [a, err] = await abierto(env, id);
+  if (err) return err;
+  if (a.autor_id !== u.id && u.rol !== "admin") return [403, { error: "No es tu anuncio" }];
+  if (a.tipo === "subasta" && a.pujador_id) return [400, { error: "La subasta ya tiene pujas: no se puede cambiar" }];
+  const [n, e2] = leerAnuncio(d, a.tipo);
+  if (e2) return [400, { error: e2 }];
+  const imagen = await guardarImagenes(env, u, n.objetos, Date.now());
+  const titulo = n.titulo || "Anuncio " + numeroAnuncio(a.id);
+  const e3 = await lote(env, [env.DB.prepare(
+    "UPDATE anuncios SET titulo = ?1, imagen = ?2, descripcion = ?3, objetos = ?4, precio = ?5, version = ?6 WHERE id = ?7"
+  ).bind(titulo, imagen, n.descripcion, JSON.stringify(n.objetos), n.precio, a.version + 1, a.id)]);
+  return e3 || [200, { ok: true }];
 }
 
 export async function quitar(env, u, id) {
@@ -254,7 +284,7 @@ export async function movimientos(env, u, url) {
   const otro = url.searchParams.get("usuario");
   const quien = otro && u.rol === "admin" ? otro : u.id;
   const r = await env.DB.prepare(
-    `SELECT m.id, m.cantidad, m.motivo, m.anuncio_id, m.fecha, a.nombre AS admin, r.numero AS recibo
+    `SELECT m.id, m.cantidad, m.motivo, m.anuncio_id, m.fecha, a.nombre AS admin, r.anuncio_id AS recibo
      FROM movimientos m LEFT JOIN usuarios a ON a.id = m.admin_id
      LEFT JOIN recibos r ON r.anuncio_id = m.anuncio_id AND (r.comprador_id = m.usuario_id OR r.vendedor_id = m.usuario_id)
        AND m.motivo NOT LIKE 'Puja apartada%' AND m.motivo NOT LIKE 'Te superaron%'
@@ -296,7 +326,7 @@ export async function datosRecibo(env, numero) {
      LEFT JOIN anuncios a ON a.id = r.anuncio_id WHERE r.numero = ?1`).bind(Number(numero)).first();
   if (!r) return null;
   // Las imágenes de los objetos no van dentro del recibo: se mandan adjuntas en el mismo mensaje.
-  return { ...r, datos: { numero: r.numero, tipo: NOMBRE_TIPO[r.tipo], comprador: r.comprador || "?", vendedor: r.vendedor || "?",
+  return { ...r, datos: { numero: r.anuncio_id, tipo: NOMBRE_TIPO[r.tipo], comprador: r.comprador || "?", vendedor: r.vendedor || "?",
     fecha: r.fecha, objetos: JSON.parse(r.objetos) } };
 }
 
@@ -326,7 +356,7 @@ export async function enviarRecibo(env, numero) {
   const toma = await env.DB.prepare("UPDATE recibos SET enviado = 1 WHERE numero = ?1 AND enviado = 0").bind(numero).run();
   if (!toma.meta.changes) return;
   const r = await datosRecibo(env, numero);
-  const nombre = `recibo-${String(numero).padStart(4, "0")}.png`;
+  const nombre = `recibo-${String(r.anuncio_id).padStart(4, "0")}.png`;
   const fotos = [];
   // Una foto por objeto que la tenga, con el nombre del objeto como nombre de archivo.
   for (const [i, o] of JSON.parse(r.objetos_anuncio || "[]").entries()) {
@@ -340,7 +370,7 @@ export async function enviarRecibo(env, numero) {
     } catch {}
   }
   const titulo = (await env.DB.prepare("SELECT titulo FROM anuncios WHERE id = ?1").bind(r.anuncio_id).first())?.titulo || "";
-  const n = `#${String(numero).padStart(4, "0")}`;
+  const n = numeroAnuncio(r.anuncio_id);
   // Cada uno recibe su versión: el comprador «Compra» (o «Subasta»), el vendedor «Venta».
   const png = async lado => [{ nombre, tipo: "image/png", datos: await reciboPng(paraLado(r, lado)) }, ...fotos];
   const compra = await png("comprador"), venta = await png("vendedor");
@@ -350,7 +380,7 @@ export async function enviarRecibo(env, numero) {
   ];
   // Canal de registro: la versión del comprador (PROVISIONAL)
   if (env.RECIBOS_CANAL) envios.push([async () => env.RECIBOS_CANAL,
-    `🧾 ${NOMBRE_TIPO[r.tipo]} ${n}: ${r.vendedor} → ${r.comprador}, «${titulo}», ${r.total} monedas.`, compra]);
+    (r.comprador_id === "prueba" || r.vendedor_id === "prueba" ? "🧪 PRUEBA · " : "") + `🧾 ${NOMBRE_TIPO[r.tipo]} ${n}: ${r.vendedor} → ${r.comprador}, «${titulo}», ${r.total} monedas.`, compra]);
   let bien = 0;
   for (const [canal, msg, adjuntos] of envios) {
     try { await mandarMensaje(env, await canal(), msg, adjuntos); bien++; }
@@ -366,8 +396,10 @@ export async function enviarPendientes(env) {
 }
 
 // Imagen del recibo: solo la ven comprador, vendedor y admins.
-export async function imagenRecibo(env, u, numero) {
-  const r = await datosRecibo(env, numero);
+// Imagen del recibo por número de anuncio (/api/recibo/0001.png): solo comprador, vendedor y admins.
+export async function imagenRecibo(env, u, anuncio) {
+  const x = await env.DB.prepare("SELECT numero FROM recibos WHERE anuncio_id = ?1").bind(Number(anuncio)).first();
+  const r = x && await datosRecibo(env, x.numero);
   if (!r) return null;
   if (u.rol !== "admin" && u.id !== r.comprador_id && u.id !== r.vendedor_id) return false;
   return reciboPng(paraLado(r, u.id === r.vendedor_id ? "vendedor" : "comprador"));
