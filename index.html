@@ -5,22 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inicio · Servidor</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="css/estilo.css?v=33">
+<link rel="stylesheet" href="css/estilo.css?v=35">
 </head>
 <body data-pagina="inicio">
 <header id="cabecera"></header>
 <section class="hero">
-<h1>Bienvenido a Charcaland</h1>
+<small id="saludo">SERVIDOR DE AMIGOS</small>
+<h1 class="logo-grande" id="logoGrande">Charcaland</h1>
 <p>Eventos, historia, mods propios y un mercadillo entre jugadores.</p>
 <a class="btn" id="btnEntrar" href="sugerencias.html">Entrar con Discord</a>
-<a class="btn g oculto" id="btnDiscord" href="#" target="_blank" rel="noopener">Unirme al Discord</a>
+<a class="btn discord oculto" id="btnDiscord" href="#" target="_blank" rel="noopener">Unirme al Discord</a>
+<a class="btn oculto" id="btnMerc" href="mercadillo.html">Ir al mercadillo</a>
+<a class="btn g oculto" id="btnPerfil" href="perfil.html">Mi perfil</a>
 </section>
+<div class="linea-verde"></div>
 <main>
-<p class="sub" style="text-align:center">Para jugar: conéctate al mundo de tu amigo anfitrión.</p>
-<section class="seccion"><h2>Próximo</h2><div id="evento" class="destacada"></div></section>
+<div id="evento" class="tres-inicio"></div>
+<div class="jugar">🎮 Para jugar: conéctate al mundo de tu amigo anfitrión.</div>
 </main>
 <footer id="pie"></footer>
 <script src="js/datos.js?v=14"></script>
-<script src="js/app.js?v=22"></script>
+<script src="js/app.js?v=24"></script>
 </body>
 </html>

@@ -554,3 +554,32 @@ main:has(#perfil) { max-width: 1100px; }
 .cuadro-tienda p { margin: 0; color: var(--suave); font-size: .8rem; }
 .cuadro-tienda .precio { display: block; margin-top: 6px; color: #f5c542; font-weight: 700; }
 @media (max-width: 600px) { .cartel-perfil { flex-wrap: wrap; } .cartel-perfil .der { margin-left: 0; text-align: left; } }
+
+/* Administración */
+.admin-monedas { margin-bottom: 18px; }
+.admin-monedas h2 i { color: var(--acento); }
+.admin-monedas .dos { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; }
+@media (max-width: 600px) { .admin-monedas .dos { grid-template-columns: 1fr; } }
+.aviso.ok { display: block; background: rgba(90,209,106,.12); border-color: var(--acento); color: var(--acento); }
+.lista-gente { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow-y: auto; }
+.fila-gente { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--texto); text-decoration: none; }
+.fila-gente:hover { background: var(--panel2); }
+.fila-gente span { flex: 1; }
+.fila-gente b { color: #f5c542; }
+
+/* Inicio */
+.hero { background: none; border-bottom: 0; padding: 64px 16px 52px; }
+.hero small { color: var(--acento); font-weight: 700; letter-spacing: 3px; }
+.hero .logo-grande { font-size: 4rem; margin: 6px 0; letter-spacing: 4px; font-weight: 900; }
+.logo-grande span { color: var(--acento); }
+.btn.discord { background: #5865f2; color: #fff; }
+.linea-verde { height: 3px; max-width: 1100px; margin: 0 auto; background: #8fe39b; opacity: .6; border-radius: 2px; }
+.tres-inicio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.tarjeta-inicio { display: flex; flex-direction: column; border-radius: 14px; padding: 20px; text-decoration: none; color: var(--texto); }
+.tarjeta-inicio .t { color: var(--suave); font-size: .8rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.tarjeta-inicio h3 { margin: 6px 0 4px; font-size: 1.25rem; }
+.tarjeta-inicio p { flex: 1; }
+.tarjeta-inicio .pie { align-self: flex-start; margin-top: 12px; background: var(--panel2); padding: 4px 10px; border-radius: 8px; font-weight: 600; font-size: .9rem; }
+.jugar { margin-top: 32px; text-align: center; color: var(--suave); padding: 18px; border: 1px dashed var(--borde); border-radius: 12px; }
+main:has(.tres-inicio) { max-width: 1100px; }
+@media (max-width: 800px) { .tres-inicio { grid-template-columns: 1fr; } .hero .logo-grande { font-size: 2.6rem; } }

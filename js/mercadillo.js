@@ -16,10 +16,7 @@ function quedan(fin) {
 const minimaDe = a => a.puja ? a.puja + a.puja_minima : a.precio;
 const numeroAnuncio = id => "#" + String(id).padStart(4, "0"); // el mismo número sale en el recibo
 
-// Modo pruebas (solo admins): las acciones del mercadillo se hacen como «Jugador de prueba».
-let MODO_PRUEBA = false;
-try { MODO_PRUEBA = sessionStorage.getItem("merc_prueba") === "1"; } catch {}
-const mapi = (ruta, op) => api(ruta, { ...op, headers: MODO_PRUEBA ? { "X-Como": "prueba" } : {} });
+const mapi = api;
 
 // Ventana sencilla reutilizable
 function ventana(html) {
@@ -231,35 +228,14 @@ function nuevoAnuncio(alGuardar, ed) {
   };
 }
 
-// Solo admins: dar (+) o quitar (−) monedas a alguien, siempre con motivo.
-async function ventanaMonedas(alAcabar) {
-  let gente = [];
-  try { gente = await api("/api/usuarios"); } catch (er) { alert(er.message); return; }
-  const v = ventana(`<form class="form-monedas"><h2>Dar o quitar monedas</h2>
-    <label>Jugador</label><select name="usuario_id">${gente.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)} · ${p.saldo} monedas</option>`).join("")}</select>
-    <label>Cantidad <small>(negativa para quitar)</small></label><input name="cantidad" type="number" required placeholder="100 o -100">
-    <label>Motivo</label><input name="motivo" required maxlength="200" placeholder="Por ejemplo: premio del evento">
-    <div class="aviso oculto"></div>
-    <button type="submit">Guardar</button> <a class="btn g" href="#" data-cerrar>Cancelar</a></form>`);
-  v.querySelector("form").onsubmit = async e => {
-    e.preventDefault();
-    const d = Object.fromEntries(new FormData(e.target));
-    try { await api("/api/monedas", { method: "POST", body: JSON.stringify({ ...d, cantidad: Number(d.cantidad) }) }); v.remove(); alAcabar(); }
-    catch (er) { errorEn(v, er.message); }
-  };
-}
-
 async function paginaMercadillo() {
   const caja = document.getElementById("mercado");
-  const real = await SESION;            // quien ha entrado de verdad
-  const admin = real && real.rol === "admin";
-  if (!admin) MODO_PRUEBA = false;
-  let u = real;                          // con quien se actúa (en modo pruebas, el jugador de prueba)
+  const u = await SESION;
+  const admin = u && u.rol === "admin";
   let items = [];
   const estado = { buscar: "", orden: "recientes" };
   async function cargar() {
     try {
-      if (MODO_PRUEBA) u = await mapi("/api/yo");
       items = await mapi("/api/mercadillo");
       const escribiendo = document.activeElement && document.activeElement.id === "fBuscar"; // no perder el buscador al recargar
       pintar(); refrescarDetalle();
@@ -269,10 +245,9 @@ async function paginaMercadillo() {
   }
   // Tras pagar o cobrar, el saldo de la cabecera se pone al día.
   async function refrescarSaldo() {
-    try { const yo = await mapi("/api/yo"); const s = document.querySelector("#usuario .saldo"); if (s) s.textContent = yo.saldo + " monedas" + (MODO_PRUEBA ? " (prueba)" : ""); } catch {}
+    try { const yo = await mapi("/api/yo"); const s = document.querySelector("#usuario .saldo"); if (s) s.textContent = yo.saldo + " monedas"; } catch {}
   }
   const hecho = async () => { await cargar(); refrescarSaldo(); };
-  if (MODO_PRUEBA) refrescarSaldo();
 
   // Inicio: una fila de subastas en las que ya se puja (las que acaban antes primero)
   // y dos filas con los últimos anuncios. Las filas se calculan según el ancho de la pantalla.
@@ -300,8 +275,6 @@ async function paginaMercadillo() {
       caro: (a, b) => precioDe(b) - precioDe(a), barato: (a, b) => precioDe(a) - precioDe(b) };
     lista = lista.slice().sort(ORD[estado.orden]);
     caja.innerHTML = (admin ? `<div class="barra-pruebas">
-        ${interruptor("prueba", "Modo pruebas", MODO_PRUEBA, "Compras, ventas y pujas como «Jugador de prueba» (empieza con 10.000 monedas)")}
-        <a class="btn g" href="#" id="btnMonedas"><i class="ti ti-coins"></i> Dar o quitar monedas</a>
         <a class="btn g" href="#" id="btnCorreo" title="Manda un recibo de ejemplo al Gmail que envía los recibos"><i class="ti ti-mail"></i> Probar correo</a></div>` : "") + `<div class="barra-merc">
         <div class="wtabs">${M_PESTANAS.map(([id, t]) => `<a href="#${id}" class="${id === sel ? "sel" : ""}">${t}</a>`).join("")}</div>
         <div class="filtros">
@@ -392,12 +365,6 @@ async function paginaMercadillo() {
     b.oninput = () => { estado.buscar = b.value; pintar(); const n = caja.querySelector("#fBuscar"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
     caja.querySelector("#fOrden").onchange = e => { estado.orden = e.target.value; pintar(); };
     const n = caja.querySelector("#nuevo"); if (n) n.onclick = e => { e.preventDefault(); nuevoAnuncio(cargar); };
-    const pr = caja.querySelector("[name=prueba]");
-    if (pr) pr.onchange = () => {
-      MODO_PRUEBA = pr.checked; try { sessionStorage.setItem("merc_prueba", MODO_PRUEBA ? "1" : "0"); } catch {}
-      u = real; hecho();
-    };
-    const bm = caja.querySelector("#btnMonedas"); if (bm) bm.onclick = e => { e.preventDefault(); ventanaMonedas(refrescarSaldo); };
     const bc = caja.querySelector("#btnCorreo");
     if (bc) bc.onclick = async e => {
       e.preventDefault(); bc.textContent = "Mandando…";

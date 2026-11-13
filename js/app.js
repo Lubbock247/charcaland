@@ -80,7 +80,7 @@ const SESION = (async () => {
     const el = document.getElementById("usuario");
     el.innerHTML = u
       ? `<span class="saldo" title="Tus monedas">${u.saldo} monedas</span><div class="menu-yo"><a href="#" class="perfil" id="btnYo" title="Tu cuenta"><img class="avatar" src="${avatarDe(u)}" alt="${esc(u.nombre)}"></a>
-         <div class="desplegable oculto" id="menuYo"><a href="perfil.html"><i class="ti ti-user"></i> Perfil</a><a href="#" id="salirNav"><i class="ti ti-logout"></i> Salir</a></div></div>`
+         <div class="desplegable oculto" id="menuYo"><a href="perfil.html"><i class="ti ti-user"></i> Perfil</a>${u.rol === "admin" ? `<a href="admin.html"><i class="ti ti-shield"></i> Administración</a>` : ""}<a href="#" id="salirNav"><i class="ti ti-logout"></i> Salir</a></div></div>`
       : `<a href="#" id="entrarNav">Entrar con Discord</a>`;
     const n = document.getElementById("entrarNav"); if (n) n.onclick = e => { e.preventDefault(); irALogin(); };
     // Menú del avatar: Perfil y Salir. Se cierra al pulsar fuera.
@@ -334,6 +334,51 @@ const render = {
   mods() { if (location.hash.length > 1) document.body.classList.add("en-wiki"); iniciarWiki("mods"); },
   eventos() { paginaNoticias("evento"); },
   lore() { iniciarWiki("lore"); },
+  // Administración (solo admins): dar o quitar monedas a un jugador, con motivo.
+  async admin() {
+    const u = await SESION, caja = document.getElementById("admin");
+    if (!u || u.rol !== "admin") { caja.innerHTML = `<div class="vacio">Esta página es solo para administradores.</div>`; return; }
+    let gente = [], filtro = "";
+    const cargar = async () => {
+      try { gente = (await api("/api/usuarios")).filter(p => p.id !== "prueba"); pintar(); }
+      catch (er) { caja.innerHTML = `<div class="vacio">No se pudo cargar: ${esc(er.message)}</div>`; }
+    };
+    const pintar = () => {
+      const elegido = caja.querySelector("[name=usuario_id]") && caja.querySelector("[name=usuario_id]").value;
+      const norm = t => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+      const lista = gente.filter(p => !filtro || norm(p.nombre).includes(norm(filtro)));
+      caja.innerHTML = `<div class="tarjeta admin-monedas"><h2><i class="ti ti-coins"></i> Dar o quitar monedas</h2>
+        <form id="fMonedas">
+          <label>Jugador</label><select name="usuario_id" required>${gente.map(p => `<option value="${esc(p.id)}" ${p.id === elegido ? "selected" : ""}>${esc(p.nombre)} · ${p.saldo} monedas</option>`).join("")}</select>
+          <div class="dos"><div><label>Cantidad <small>(negativa para quitar)</small></label><input name="cantidad" type="number" required placeholder="100 o -100"></div>
+          <div><label>Motivo</label><input name="motivo" required maxlength="200" placeholder="Por ejemplo: premio del evento"></div></div>
+          <div class="aviso oculto" id="avisoM"></div>
+          <button type="submit">Guardar</button></form></div>
+        <div class="tarjeta admin-monedas"><h2><i class="ti ti-users"></i> Jugadores</h2>
+          <input id="fGente" type="search" placeholder="Buscar jugador…" value="${esc(filtro)}">
+          <div class="lista-gente">${lista.map(p => `<a href="#" class="fila-gente" data-id="${esc(p.id)}" title="Elegir para dar o quitar monedas">
+            <img class="avatar" src="${avatarDe(p, 32)}" alt=""><span>${esc(p.nombre)}</span><b>${Number(p.saldo).toLocaleString("es-ES")} monedas</b></a>`).join("") || `<div class="vacio">Nadie con ese nombre.</div>`}</div></div>`;
+      const f = caja.querySelector("#fMonedas"), aviso = caja.querySelector("#avisoM");
+      f.onsubmit = async e => {
+        e.preventDefault();
+        const d = Object.fromEntries(new FormData(f)), p = gente.find(x => x.id === d.usuario_id);
+        const n = Number(d.cantidad);
+        if (!confirm(`¿${n > 0 ? "Dar" : "Quitar"} ${Math.abs(n)} monedas a ${p ? p.nombre : "?"}?`)) return;
+        try {
+          await api("/api/monedas", { method: "POST", body: JSON.stringify({ ...d, cantidad: n }) });
+          await cargar();
+          const a = caja.querySelector("#avisoM"); a.textContent = `Hecho: ${p.nombre} ${n > 0 ? "recibe" : "pierde"} ${Math.abs(n)} monedas.`; a.className = "aviso ok";
+          if (d.usuario_id === u.id) { const s = document.querySelector("#usuario .saldo"); const yo = gente.find(x => x.id === u.id); if (s && yo) s.textContent = yo.saldo + " monedas"; }
+        } catch (er) { aviso.textContent = er.message; aviso.className = "aviso"; }
+      };
+      const b = caja.querySelector("#fGente");
+      b.oninput = () => { filtro = b.value; pintar(); const n = caja.querySelector("#fGente"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+      caja.querySelectorAll(".fila-gente").forEach(x => x.onclick = e => {
+        e.preventDefault(); f.usuario_id.value = x.dataset.id; f.cantidad.focus(); f.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    };
+    cargar();
+  },
   async perfil() {
     const u = await SESION, caja = document.getElementById("perfil");
     if (!u) { caja.innerHTML = `<div class="vacio">Entra con Discord para ver tu perfil.<br><br><a class="btn" href="#" id="entrarPerfil">Entrar con Discord</a></div>`;
@@ -358,17 +403,29 @@ const render = {
     };
   },
   async inicio() {
+    document.getElementById("logoGrande").innerHTML = logoServidor(CONFIG.nombreServidor);
     const [ups, evs] = await Promise.all([api("/api/noticias/updates").catch(() => []), api("/api/noticias/eventos").catch(() => [])]);
-    const u = ups[0];
-    const e = evs.filter(x => x.fecha && x.fecha >= hoyMadrid()).sort((a, b) => a.fecha < b.fecha ? -1 : 1)[0];
+    const hoy = hoyMadrid(), u = ups[0];
+    const e = evs.filter(x => x.fecha && x.fecha >= hoy && !esVotacion(x)).sort((a, b) => a.fecha < b.fecha ? -1 : 1)[0];
+    // Votación abierta: un evento con opciones que no ha pasado (la más próxima, o una sin fecha).
+    const v = evs.filter(x => esVotacion(x) && (!x.fecha || x.fecha >= hoy)).sort((a, b) => (a.fecha || "9") < (b.fecha || "9") ? -1 : 1)[0];
+    const votos = n => n.opciones.reduce((s, o) => s + (o.votos || 0), 0);
+    const cuando = n => fechaBonita(n.fecha).replace(/ de \d{4}$/, "") + (n.hora_inicio ? " · " + n.hora_inicio : "");
+    const tarjeta = (href, titulo, h, p, pie) => `<a class="tarjeta tarjeta-inicio" href="${href}"><div class="t">${titulo}</div><h3>${esc(h)}</h3><p>${esc(p || "")}</p>${pie ? `<span class="pie">${pie}</span>` : ""}</a>`;
     document.getElementById("evento").innerHTML =
-      (e ? `<a class="tarjeta" href="eventos.html#${e.id}"><h3>${esc(e.titulo)}</h3><p>${fechaBonita(e.fecha)}</p></a>`
-         : `<a class="tarjeta" href="eventos.html#proximamente"><div class="icono">◆</div><h3>Eventos</h3><p>No hay eventos próximos con fecha</p></a>`) +
-      `<a class="tarjeta" href="updates.html${u ? "#" + u.id : ""}"><div class="icono">◆</div><h3>Última update</h3><p>${esc(u ? tituloNoticia(u) : "Aún no hay updates")}</p></a>
-       <a class="tarjeta" href="mercadillo.html"><div class="icono">◆</div><h3>Mercadillo</h3><p>Próximamente</p></a>`;
+      (e ? tarjeta(`eventos.html#${e.id}`, "📅 Próximo evento", e.titulo, e.resumen, cuando(e))
+         : tarjeta("eventos.html", "📅 Próximo evento", "Nada a la vista", "No hay eventos próximos con fecha.")) +
+      (u ? tarjeta(`updates.html#${u.id}`, "🔧 Última update", tituloNoticia(u), u.resumen, u.fecha ? fechaBonita(u.fecha) : "")
+         : tarjeta("updates.html", "🔧 Última update", "Aún no hay updates", "")) +
+      (v ? tarjeta(`eventos.html#${v.id}`, "🗳️ Votación abierta", v.titulo, v.opciones.map(o => o.texto).filter(Boolean).join(" · "), `${votos(v)} voto${votos(v) === 1 ? "" : "s"}`)
+         : tarjeta("eventos.html", "🗳️ Votaciones", "Ninguna abierta", "Cuando haya una votación, saldrá aquí."));
     const yo = await SESION;
-    if (yo) document.getElementById("btnEntrar").classList.add("oculto");
-    if (CONFIG.invitacionDiscord && !yo) {   // quien ya ha entrado está en el Discord
+    if (yo) {
+      document.getElementById("saludo").textContent = "HOLA DE NUEVO, " + yo.nombre.toUpperCase();
+      document.getElementById("btnEntrar").classList.add("oculto");
+      document.getElementById("btnMerc").classList.remove("oculto");
+      document.getElementById("btnPerfil").classList.remove("oculto");
+    } else if (CONFIG.invitacionDiscord) {   // quien ya ha entrado está en el Discord
       const b = document.getElementById("btnDiscord");
       b.href = CONFIG.invitacionDiscord; b.classList.remove("oculto");
     }

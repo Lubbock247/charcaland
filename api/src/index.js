@@ -11,7 +11,7 @@ function cors(env, req) {
   const permitidos = env.ORIGENES.split(",");
   return {
     "Access-Control-Allow-Origin": permitidos.includes(origen) ? origen : permitidos[0],
-    "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Como",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Vary": "Origin",
   };
@@ -65,17 +65,8 @@ async function usuarioDe(req, env) {
 }
 
 // Igual que usuarioDe, pero devuelve una respuesta de error si no vale para hacer cosas.
-// Modo pruebas: un admin con la cabecera «X-Como: prueba» actúa como el «Jugador de prueba»,
-// para poder comprar, vender y pujar sin esperar a otra persona. Empieza con 10.000 monedas.
-async function comoPrueba(req, env, u) {
-  if (!u || u.fuera || u.rol !== "admin" || req.headers.get("X-Como") !== "prueba") return u;
-  await env.DB.prepare("INSERT INTO usuarios (id, nombre, saldo, en_servidor) VALUES ('prueba', 'Jugador de prueba', 10000, 1) ON CONFLICT(id) DO NOTHING").run();
-  const f = await env.DB.prepare("SELECT id, nombre, avatar, saldo FROM usuarios WHERE id = 'prueba'").first();
-  return { ...f, rol: "usuario", prueba: true, admin_real: u.id };
-}
-
 async function miembroDe(req, env, cab) {
-  const u = await comoPrueba(req, env, await usuarioDe(req, env));
+  const u = await usuarioDe(req, env);
   if (!u) return [null, json({ error: "No has iniciado sesión" }, 401, cab)];
   if (u.fuera) return [null, json({ error: "Tienes que estar en el Discord del servidor", fuera: u.fuera }, 403, cab)];
   return [u, null];
@@ -422,7 +413,7 @@ export default {
         return json(cuerpo, est, cab);
       }
       if (ruta === "/api/yo" && req.method === "GET") {
-        const u = await comoPrueba(req, env, await usuarioDe(req, env));
+        const u = await usuarioDe(req, env);
         return u ? json(u, 200, cab) : json({ error: "No has iniciado sesión" }, 401, cab);
       }
       const m = ruta.match(/^\/api\/wiki\/(mods|lore)(?:\/([a-z0-9-]+))?$/);
@@ -483,8 +474,7 @@ export default {
       }
       if (ruta === "/api/mercadillo" && req.method === "GET") {
         const u = req.headers.get("Authorization") || local ? await usuarioDe(req, env) : null;
-        const yo = await comoPrueba(req, env, u);
-        return json(await merc.listar(env, yo && !yo.fuera ? yo : null), 200, cab);
+        return json(await merc.listar(env, u && !u.fuera ? u : null), 200, cab);
       }
       const mc = ruta.match(/^\/api\/mercadillo(?:\/(\d+)(?:\/(comprar|pujar|lotengo|aceptar))?)?$/);
       const otras = ["/api/movimientos", "/api/monedas", "/api/usuarios", "/api/correo-prueba"].includes(ruta) || /^\/api\/recibo\/\d+\.png$/.test(ruta);

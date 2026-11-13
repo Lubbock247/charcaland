@@ -414,7 +414,7 @@ export async function enviarRecibo(env, numero) {
   ];
   // Canal de registro: la versión del comprador (PROVISIONAL)
   if (env.RECIBOS_CANAL) envios.push([async () => env.RECIBOS_CANAL,
-    (r.comprador_id === "prueba" || r.vendedor_id === "prueba" ? "🧪 PRUEBA · " : "") + `🧾 ${NOMBRE_TIPO[r.tipo]} ${n}: ${r.vendedor} → ${r.comprador}, «${titulo}», ${r.total} monedas.`, compra]);
+    `🧾 ${NOMBRE_TIPO[r.tipo]} ${n}: ${r.vendedor} → ${r.comprador}, «${titulo}», ${r.total} monedas.`, compra]);
   let bien = 0;
   for (const [canal, msg, adjuntos] of envios) {
     try { await mandarMensaje(env, await canal(), msg, adjuntos); bien++; }
