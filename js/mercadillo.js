@@ -426,4 +426,76 @@ async function paginaMercadillo() {
   }, 1000);
   cargar();
 }
-paginaMercadillo(); // este archivo va después de app.js
+// Tienda del perfil: solo tus anuncios, en un estante. Desde aquí se editan y se quitan, pero no se crean.
+const T_PESTANAS = [["todo", "Todo"], ["vendo", "Vendo"], ["busco", "Busco"], ["subasta", "Subastas"]];
+function cuadroTienda(a, u) {
+  const img = (a.objetos.find(o => o.imagen) || {}).imagen;
+  const o = a.objetos[0] || { encantamientos: [] };
+  const texto = a.tipo === "subasta" ? (a.pujas ? `${a.pujas} puja${a.pujas === 1 ? "" : "s"} · gana ${esc(a.pujador || "?")}` : "Sin pujas aún")
+    : a.objetos.length > 1 ? `${a.objetos.length} objetos` : o.encantamientos.map(esc).join(", ");
+  const precio = a.tipo === "subasta" && a.puja ? "Puja: " + monedas(a.puja) : monedas(a.precio);
+  return `<div class="cuadro-tienda" data-ver="${a.id}" title="Ver el anuncio">
+    ${cabeceraAnuncio(a, u)}
+    <div class="ico">${img ? `<img src="${esc(urlImagen(img))}" alt="" loading="lazy">` : `<i class="ti ti-box"></i>`}</div>
+    <h3>${esc(a.titulo)}</h3><p>${texto || "&nbsp;"}</p><span class="precio">${precio}</span></div>`;
+}
+async function paginaTienda(u) {
+  const caja = document.getElementById("tienda"), resumen = document.getElementById("resumenTienda");
+  let items = [], sel = "todo";
+  async function cargar() {
+    try { items = (await api("/api/mercadillo")).filter(a => a.autor_id === u.id); pintar(); }
+    catch { caja.innerHTML = `<div class="vacio">No se pudo cargar tu tienda.</div>`; }
+  }
+  function pintar() {
+    const cuenta = t => items.filter(a => t === "todo" || a.tipo === t).length;
+    resumen.textContent = `${cuenta("vendo")} en venta · ${cuenta("busco")} buscando · ${cuenta("subasta")} subasta${cuenta("subasta") === 1 ? "" : "s"}`;
+    const lista = items.filter(a => sel === "todo" || a.tipo === sel).sort((x, y) => y.id - x.id);
+    caja.innerHTML = `<h2><i class="ti ti-building-store"></i> La tienda de ${esc(u.nombre)}</h2>
+      <p class="sub">Todo lo que tienes publicado en el <a href="mercadillo.html">mercadillo</a></p>
+      <div class="wtabs">${T_PESTANAS.map(([id, t]) => `<a href="#" data-pest="${id}" class="${id === sel ? "sel" : ""}">${t}<em>${cuenta(id)}</em></a>`).join("")}</div>
+      <div class="estante">${lista.length ? lista.map(a => cuadroTienda(a, u)).join("")
+        : `<div class="vacio">${sel === "todo" ? "Aún no tienes nada en el mercadillo." : "Nada aquí."}</div>`}</div>`;
+    caja.querySelectorAll("[data-pest]").forEach(p => p.onclick = e => { e.preventDefault(); sel = p.dataset.pest; pintar(); });
+    acciones(caja);
+    caja.querySelectorAll("[data-ver]").forEach(t => t.onclick = () => verDetalle(items.find(a => a.id == t.dataset.ver)));
+  }
+  function verDetalle(a) {
+    const v = ventana(detalleAnuncio(a, u));
+    v.classList.add("con-scroll"); v.querySelector(".ventana-merc").classList.add("ancha");
+    acciones(v, () => v.remove());
+    v.querySelectorAll("[data-grande]").forEach(x => x.onclick = e => {
+      e.preventDefault();
+      const g = ventana(`<img class="img-grande" src="${x.dataset.grande}" alt="">`);
+      g.querySelector(".ventana-merc").classList.add("solo-img"); g.onclick = () => g.remove();
+    });
+  }
+  // Lo que puede hacer el dueño: editar, quitar y, en un «Busco», elegir a quién comprárselo.
+  function acciones(raiz, antes) {
+    const on = (s, f) => raiz.querySelectorAll(s).forEach(b => b.onclick = e => {
+      e.preventDefault(); e.stopPropagation(); if (antes) antes();
+      f(items.find(a => a.id == Object.values(b.dataset)[0]));
+    });
+    on("[data-editar]", a => nuevoAnuncio(cargar, a));
+    on("[data-quitar]", async a => {
+      if (!confirm(`¿Quitar «${a.titulo}» del mercadillo?`)) return;
+      try { await api(`/api/mercadillo/${a.id}`, { method: "DELETE" }); cargar(); } catch (er) { alert(er.message); }
+    });
+    on("[data-ofertas]", a => {
+      const v = ventana(`<h2>¿A quién se lo compras?</h2><p class="ayuda">Pagas ${monedas(a.precio)} al momento.</p>
+        ${(a.lista_ofertas || []).map(p => `<div class="votante"><img class="avatar" src="${avatarDe(p, 32)}" alt="">${esc(p.nombre)}
+          <button type="button" class="aceptar" data-quien="${esc(p.id)}">Aceptar</button></div>`).join("")}
+        <div class="aviso oculto"></div><a class="btn g" href="#" data-cerrar>Cancelar</a>`);
+      v.querySelectorAll("[data-quien]").forEach(x => x.onclick = async () => {
+        try { await api(`/api/mercadillo/${a.id}/aceptar`, { method: "POST", body: JSON.stringify({ usuario_id: x.dataset.quien }) }); v.remove(); location.reload(); }
+        catch (er) { errorEn(v, er.message); }
+      });
+    });
+  }
+  // Cuenta atrás de las subastas y recarga cada 30 s (si no hay ventanas abiertas).
+  setInterval(() => document.querySelectorAll("[data-fin]").forEach(q => { q.innerHTML = `<i class="ti ti-clock"></i> ${quedan(+q.dataset.fin)}`; }), 1000);
+  setInterval(() => { if (!document.querySelector(".fondo-fuera") && !document.hidden) cargar(); }, 30000);
+  cargar();
+}
+
+// Este archivo va después de app.js. En el mercadillo pinta la página; en el perfil, app.js llama a paginaTienda.
+if (document.getElementById("mercado")) paginaMercadillo();

@@ -516,3 +516,41 @@ a.det-img:hover { outline: 2px solid var(--acento); }
 .form-entrar h1 { font-size: 1.6rem; margin: 0 0 8px; }
 .form-entrar label small { color: var(--suave); font-weight: 400; }
 .conectar-dc { margin-top: 16px; max-width: 480px; } .conectar-dc h3 i { color: #8a9cff; } .conectar-dc p { margin: 6px 0 12px; }
+
+/* Cabecera: logo pegado a la izquierda, menú en el centro, cuenta a la derecha */
+.barra { max-width: none; padding: 0 24px; }
+.barra nav { flex: 1; justify-content: center; }
+.barra .usuario { margin-left: 0; }
+.menu-yo { position: relative; }
+.desplegable { position: absolute; right: 0; top: calc(100% + 8px); background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 6px; min-width: 150px; box-shadow: 0 8px 24px rgba(0,0,0,.4); z-index: 20; }
+.desplegable a { display: flex; align-items: center; gap: 8px; padding: 8px 10px !important; border-radius: 7px; color: var(--texto) !important; }
+.desplegable a:hover { background: var(--panel2); }
+.desplegable a#salirNav:hover { color: #ff6b6a !important; }
+
+/* Perfil: cartel y tienda */
+main:has(#perfil) { max-width: 1100px; }
+.cartel-perfil { display: flex; align-items: center; gap: 18px; background: linear-gradient(90deg, #2a3b2e, var(--panel) 60%); border: 1px solid var(--borde); border-radius: 14px; padding: 18px 22px; }
+.cartel-perfil img { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; }
+.cartel-perfil h2 { margin: 0; }
+.cartel-perfil h2 .etiqueta { margin: 0 0 0 8px; vertical-align: 4px; }
+.cartel-perfil p { margin: 0; color: var(--suave); }
+.cartel-perfil .der { margin-left: auto; text-align: right; white-space: nowrap; }
+.cartel-perfil .der b { font-size: 1.6rem; color: #f5c542; }
+.toldo { margin-top: 28px; height: 26px; border-radius: 10px 10px 0 0; background: repeating-linear-gradient(90deg, var(--acento) 0 40px, #e8eaf0 40px 80px); opacity: .85; }
+.tienda { background: var(--panel); border: 1px solid var(--borde); border-top: 0; border-radius: 0 0 14px 14px; padding: 20px 20px 0; }
+.tienda > h2 { margin: 0 0 4px; text-align: center; }
+.tienda > .sub { text-align: center; margin: 0 0 16px; }
+.tienda .wtabs { border-bottom: 1px solid var(--borde); margin-top: 0; overflow: visible; }
+.tienda .wtabs a { margin-bottom: -1px; }
+.tienda .wtabs em { font-style: normal; background: var(--panel2); border-radius: 99px; padding: 0 7px; margin-left: 6px; font-size: .78rem; }
+.estante { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; background: var(--fondo); margin: 0 -20px; padding: 20px; border-radius: 0 0 14px 14px; }
+.estante .vacio { grid-column: 1 / -1; }
+.cuadro-tienda { background: var(--panel2); border: 1px solid transparent; border-radius: 10px; padding: 0 12px 12px; text-align: center; cursor: pointer; }
+.cuadro-tienda:hover { border-color: #4a5268; }
+.cuadro-tienda .cab-anuncio { padding: 10px 0 8px; min-height: 0; }
+.cuadro-tienda .ico { height: 90px; display: flex; align-items: center; justify-content: center; font-size: 2.4rem; color: var(--suave); background: var(--fondo); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+.cuadro-tienda .ico img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.cuadro-tienda h3 { margin: 0; font-size: .95rem; }
+.cuadro-tienda p { margin: 0; color: var(--suave); font-size: .8rem; }
+.cuadro-tienda .precio { display: block; margin-top: 6px; color: #f5c542; font-weight: 700; }
+@media (max-width: 600px) { .cartel-perfil { flex-wrap: wrap; } .cartel-perfil .der { margin-left: 0; text-align: left; } }

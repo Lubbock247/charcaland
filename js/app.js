@@ -31,6 +31,11 @@ function avatarDe(u, t) {
   return u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=${t || 64}`
                   : "https://cdn.discordapp.com/embed/avatars/0.png";
 }
+// Logo en mayúsculas; si el nombre acaba en «land», esa parte va en verde (CHARCA·LAND).
+function logoServidor(n) {
+  const m = String(n).match(/^(.*?)(land)$/i);
+  return m ? `${esc(m[1].toUpperCase())}<span>${esc(m[2].toUpperCase())}</span>` : esc(String(n).toUpperCase());
+}
 async function salir() {
   let t = null; try { t = localStorage.getItem("dc_token"); } catch {}
   // Cuenta sin Discord: se cierra también la sesión en la API.
@@ -70,13 +75,21 @@ const SESION = (async () => {
   const enlaces = PAGINAS.map(([u, n]) =>
     `<a href="${u}" class="${u === actual ? "activa" : ""}">${n}</a>`).join("");
   document.getElementById("cabecera").innerHTML =
-    `<div class="barra"><a class="logo" href="index.html"><span>▣</span> ${esc(CONFIG.nombreServidor)}</a><nav>${enlaces}</nav><div class="usuario" id="usuario"></div></div>`;
+    `<div class="barra"><a class="logo" href="index.html">${logoServidor(CONFIG.nombreServidor)}</a><nav>${enlaces}</nav><div class="usuario" id="usuario"></div></div>`;
   SESION.then(u => {
     const el = document.getElementById("usuario");
     el.innerHTML = u
-      ? `<span class="saldo" title="Tus monedas">${u.saldo} monedas</span><a href="perfil.html" class="perfil" title="Tu perfil"><img class="avatar" src="${avatarDe(u)}" alt="${esc(u.nombre)}"></a>`
+      ? `<span class="saldo" title="Tus monedas">${u.saldo} monedas</span><div class="menu-yo"><a href="#" class="perfil" id="btnYo" title="Tu cuenta"><img class="avatar" src="${avatarDe(u)}" alt="${esc(u.nombre)}"></a>
+         <div class="desplegable oculto" id="menuYo"><a href="perfil.html"><i class="ti ti-user"></i> Perfil</a><a href="#" id="salirNav"><i class="ti ti-logout"></i> Salir</a></div></div>`
       : `<a href="#" id="entrarNav">Entrar con Discord</a>`;
     const n = document.getElementById("entrarNav"); if (n) n.onclick = e => { e.preventDefault(); irALogin(); };
+    // Menú del avatar: Perfil y Salir. Se cierra al pulsar fuera.
+    const by = document.getElementById("btnYo"), my = document.getElementById("menuYo");
+    if (by) {
+      by.onclick = e => { e.preventDefault(); e.stopPropagation(); my.classList.toggle("oculto"); };
+      document.addEventListener("click", e => { if (!my.contains(e.target)) my.classList.add("oculto"); });
+      document.getElementById("salirNav").onclick = e => { e.preventDefault(); salir(); };
+    }
     if (FUERA) avisoFuera();
   });
   document.getElementById("pie").textContent = `${CONFIG.nombreServidor} · servidor privado de amigos`;
@@ -325,16 +338,17 @@ const render = {
     const u = await SESION, caja = document.getElementById("perfil");
     if (!u) { caja.innerHTML = `<div class="vacio">Entra con Discord para ver tu perfil.<br><br><a class="btn" href="#" id="entrarPerfil">Entrar con Discord</a></div>`;
       document.getElementById("entrarPerfil").onclick = e => { e.preventDefault(); irALogin(); }; return; }
-    caja.innerHTML = `<div class="tarjeta ficha"><img class="avatar grande" src="${avatarDe(u, 128)}" alt="">
-      <div><h2 style="margin:0">${esc(u.nombre)}</h2>
-      <span class="etiqueta ${u.rol === "admin" ? "" : "gris"}">${u.rol === "admin" ? "Administrador" : "Jugador"}</span>
-      <p class="saldo" style="font-size:1.4rem;margin:8px 0">${u.saldo} monedas</p>
-      <a class="btn g" href="#" id="btnSalir">Salir</a></div></div>
+    // Cartel con avatar, nombre, rol, resumen y monedas; debajo, la tienda (la pinta mercadillo.js).
+    caja.innerHTML = `<div class="cartel-perfil"><img src="${avatarDe(u, 128)}" alt="">
+      <div><h2>${esc(u.nombre)}<span class="etiqueta ${u.rol === "admin" ? "" : "gris"}">${u.rol === "admin" ? "Administrador" : "Jugador"}</span></h2>
+      <p id="resumenTienda">&nbsp;</p></div>
+      <div class="der"><b>${Number(u.saldo).toLocaleString("es-ES")}</b> monedas</div></div>
+      <div class="toldo"></div><div class="tienda" id="tienda"><div class="vacio">Cargando…</div></div>
       ${u.sin_discord ? `<div class="tarjeta conectar-dc"><h3><i class="ti ti-brand-discord"></i> Conectar con Discord</h3>
         <p>Entra con la cuenta de Discord que vayas a usar. Todo lo tuyo (monedas, anuncios, recibos) pasará a esa cuenta,
         que será tu cuenta de administrador. Después, este acceso con correo y contraseña dejará de funcionar.</p>
         <a class="btn" href="#" id="btnConectar">Conectar con Discord</a></div>` : ""}`;
-    document.getElementById("btnSalir").onclick = e => { e.preventDefault(); salir(); };
+    if (typeof paginaTienda === "function") paginaTienda(u);
     const bc = document.getElementById("btnConectar");
     if (bc) bc.onclick = e => {
       e.preventDefault();

@@ -1,6 +1,7 @@
 // «/clear» en el chat privado con el bot (solo los administradores de ADMIN_IDS):
 //   - Respondiendo a un mensaje del bot con «/clear»: borra ese mensaje.
-//   - «/clear» sin responder a nada: borra todos los mensajes del bot en ese chat.
+//   - «/clear-chat»: borra todos los mensajes del bot en ese chat.
+//   - «/clear» sin responder a nada: no hace nada (Rythm usa ese comando).
 // No es un comando de Discord (no hay autocompletado): es un mensaje normal que la API lee.
 // El Cron lo mira cada minuto, así que tarda hasta 1 minuto en hacerse.
 // El bot solo puede borrar sus propios mensajes; el «/clear» que escribes lo borras tú.
@@ -51,12 +52,13 @@ export async function revisarClear(env) {
       if (!msgs.length) continue;
       // La primera vez solo se apunta dónde está el chat, para no hacer caso a «/clear» antiguos.
       if (visto) {
-        const nuevos = msgs.filter(m => masNuevo(m.id, visto.valor) && m.author.id === admin && m.content.trim().toLowerCase() === "/clear").reverse();
+        const orden = m => m.content.trim().toLowerCase();
+        const nuevos = msgs.filter(m => masNuevo(m.id, visto.valor) && m.author.id === admin && ["/clear", "/clear-chat"].includes(orden(m))).reverse();
         for (const m of nuevos) {
           const ref = m.referenced_message;
-          // Respondiendo a un mensaje: solo ese (si ya no existe, nada). Sin responder: todos.
-          if (m.message_reference) { if (ref && ref.author.id === env.DISCORD_CLIENT_ID) await borrar(env, canal, ref.id); }
-          else await borrarTodos(env, canal);
+          // «/clear-chat»: todos. «/clear» respondiendo: solo ese. «/clear» suelto: nada (lo usa Rythm).
+          if (orden(m) === "/clear-chat") await borrarTodos(env, canal);
+          else if (m.message_reference && ref && ref.author.id === env.DISCORD_CLIENT_ID) await borrar(env, canal, ref.id);
         }
       }
       await env.DB.prepare("INSERT INTO bot_estado (clave, valor) VALUES (?1, ?2) ON CONFLICT(clave) DO UPDATE SET valor = ?2")
