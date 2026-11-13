@@ -63,6 +63,14 @@ export async function listar(env, u) {
      FROM anuncios a LEFT JOIN usuarios us ON us.id = a.autor_id LEFT JOIN usuarios p ON p.id = a.pujador_id
      WHERE a.estado = 'abierto' ORDER BY a.id DESC`).all();
   const lista = r.results.map(({ version, comprador_id, cerrado, ...a }) => ({ ...a, objetos: JSON.parse(a.objetos) }));
+  // Historial de pujas de las subastas abiertas (la más nueva primero): quién, cuánto y cuándo.
+  if (lista.some(a => a.tipo === "subasta" && a.pujas)) {
+    const pj = (await env.DB.prepare(
+      `SELECT p.anuncio_id, p.cantidad, p.fecha, us.nombre FROM pujas p JOIN anuncios a ON a.id = p.anuncio_id
+       LEFT JOIN usuarios us ON us.id = p.usuario_id WHERE a.estado = 'abierto' AND a.tipo = 'subasta' ORDER BY p.id DESC`).all()).results;
+    for (const a of lista) if (a.tipo === "subasta")
+      a.historial = pj.filter(p => p.anuncio_id === a.id).map(p => ({ nombre: p.nombre || "?", cantidad: p.cantidad, fecha: p.fecha }));
+  }
   if (u) {
     // A quien puso un Busco se le dice quién pulsó «Lo tengo»; a los demás, si ya lo pulsaron.
     const of = (await env.DB.prepare(

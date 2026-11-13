@@ -78,6 +78,15 @@ function tarjetaAnuncio(a, u) {
     ${precioYBoton(a, u)}</div>`;
 }
 
+// Historial de una subasta: cada puja (la más nueva arriba) y, al final, cómo empezó.
+const horaCorta = ms => new Date(ms).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+function historialPujas(a) {
+  const h = a.historial || [];
+  return `<div class="historial"><h3>Pujas</h3><ol>
+    ${h.map((p, i) => `<li class="${i ? "" : "gana"}"><b>${esc(p.nombre)}</b> pujó <b>${monedas(p.cantidad)}</b><span>${horaCorta(p.fecha)}</span></li>`).join("")}
+    <li class="inicio">Empezó con <b>${monedas(a.precio)}</b><span>${horaCorta(a.creado)}</span></li></ol></div>`;
+}
+
 // Vista detallada: cada objeto con su imagen grande, encantamientos y precio; descripción y acciones.
 function detalleAnuncio(a, u) {
   const objetos = a.objetos.map(o => `<div class="det-obj">
@@ -86,7 +95,7 @@ function detalleAnuncio(a, u) {
         <b class="det-nombre">${esc(o.nombre)}</b>
         ${a.tipo !== "subasta" ? `<span class="det-precio" title="${monedas(o.precio)} cada uno">${monedas(o.precio * o.cantidad)}</span>` : ""}
       </div>
-      ${o.encantamientos.length ? `<div class="encs">${o.encantamientos.map(e => `<span>${esc(e)}</span>`).join("")}</div>` : ""}
+      ${o.encantamientos.length ? `<div class="det-encs">Encantamientos:<ul>${o.encantamientos.map(e => `<li>${esc(e)}</li>`).join("")}</ul></div>` : ""}
       ${o.imagen ? `<a href="#" class="det-img" data-grande="${esc(urlImagen(o.imagen))}" title="Ver más grande"><img src="${esc(urlImagen(o.imagen))}" alt="" loading="lazy"></a>` : ""}
     </div>`).join("");
   return `<div class="detalle-anuncio">
@@ -96,6 +105,7 @@ function detalleAnuncio(a, u) {
     <div class="det-objs">${objetos}</div>
     ${a.descripcion ? `<p class="det-desc">${esc(a.descripcion)}</p>` : ""}
     ${precioYBoton(a, u)}
+    ${a.tipo === "subasta" ? historialPujas(a) : ""}
     <a class="btn g det-cerrar" href="#" data-cerrar>Cerrar</a>
   </div>`;
 }
@@ -250,7 +260,10 @@ async function paginaMercadillo() {
   async function cargar() {
     try {
       if (MODO_PRUEBA) u = await mapi("/api/yo");
-      items = await mapi("/api/mercadillo"); pintar();
+      items = await mapi("/api/mercadillo");
+      const escribiendo = document.activeElement && document.activeElement.id === "fBuscar"; // no perder el buscador al recargar
+      pintar(); refrescarDetalle();
+      if (escribiendo) { const n = caja.querySelector("#fBuscar"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
     }
     catch { caja.innerHTML = `<div class="vacio">No se pudo cargar el mercadillo.</div>`; }
   }
@@ -302,10 +315,26 @@ async function paginaMercadillo() {
   }
 
   // Abre el detalle de un anuncio; sus botones hacen lo mismo que los de la tarjeta.
+  // Detalle abierto: se vuelve a pintar cuando llegan datos nuevos (pujas de otros).
+  let detalle = null;
   function verDetalle(a) {
     const v = ventana(detalleAnuncio(a, u));
     v.classList.add("con-scroll");
     v.querySelector(".ventana-merc").classList.add("ancha");
+    detalle = { id: a.id, v };
+    enlazarDetalle(v);
+  }
+  function refrescarDetalle() {
+    if (!detalle || !document.body.contains(detalle.v)) { detalle = null; return; }
+    const a = items.find(x => x.id === detalle.id);
+    const caja = detalle.v.querySelector(".ventana-merc");
+    if (!a) { caja.innerHTML = `<p>Este anuncio ya no está disponible.</p><a class="btn g" href="#" data-cerrar>Cerrar</a>`;
+      caja.querySelector("[data-cerrar]").onclick = e => { e.preventDefault(); detalle.v.remove(); }; return; }
+    caja.innerHTML = detalleAnuncio(a, u);
+    enlazarDetalle(detalle.v);
+  }
+  function enlazarDetalle(v) {
+    v.querySelectorAll("[data-cerrar]").forEach(b => b.onclick = e => { e.preventDefault(); v.remove(); });
     acciones(v, () => v.remove());
     v.querySelectorAll("[data-grande]").forEach(x => x.onclick = e => {
       e.preventDefault();
@@ -377,9 +406,16 @@ async function paginaMercadillo() {
   setInterval(() => {
     let acabada = false;
     document.querySelectorAll("[data-fin]").forEach(q => { q.innerHTML = `<i class="ti ti-clock"></i> ${quedan(+q.dataset.fin)}`; if (+q.dataset.fin <= Date.now()) acabada = true; });
-    if (acabada && !document.querySelector(".fondo-fuera")) cargar();
+    if (acabada && Date.now() - ultima > 3000) { ultima = Date.now(); cargar(); }
   }, 1000);
-  setInterval(() => { if (!document.querySelector(".fondo-fuera")) cargar(); }, 30000); // pujas de otros
+  // Pujas de otros: con subastas abiertas se mira cada 5 s; si no, cada 30 s.
+  // No se recarga si hay una ventana abierta que no sea el detalle (comprar, pujar, nuevo anuncio…).
+  let ultima = 0;
+  setInterval(() => {
+    const ventanas = document.querySelectorAll(".fondo-fuera").length - (detalle && document.body.contains(detalle.v) ? 1 : 0);
+    const cada = items.some(a => a.tipo === "subasta") ? 5000 : 30000;
+    if (!ventanas && !document.hidden && Date.now() - ultima >= cada) { ultima = Date.now(); cargar(); }
+  }, 1000);
   cargar();
 }
 paginaMercadillo(); // este archivo va después de app.js

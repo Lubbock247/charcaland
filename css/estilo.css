@@ -498,3 +498,16 @@ a.det-img:hover { outline: 2px solid var(--acento); }
 .seccion-cab h2 i { color: var(--acento); }
 .seccion-cab a { font-size: .9rem; font-weight: 600; text-decoration: none; }
 .det-obj .det-img img { max-height: 200px; }
+.det-encs { margin: 8px 0 0 42px; color: var(--suave); font-size: .88rem; }
+.det-encs ul { margin: 2px 0 0; padding-left: 0; list-style: none; }
+.det-encs li { color: #d6c9ff; }
+.det-encs li::before { content: "- "; color: var(--suave); }
+/* Historial de pujas en el detalle de la subasta */
+.historial { margin-top: 16px; border-top: 1px solid var(--borde); padding-top: 12px; }
+.historial h3 { margin: 0 0 8px; font-size: 1rem; }
+.historial ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+.historial li { display: flex; gap: 6px; align-items: baseline; padding: 6px 10px; border-radius: 8px; background: var(--fondo); font-size: .9rem; }
+.historial li span { margin-left: auto; color: var(--suave); font-size: .78rem; white-space: nowrap; }
+.historial li.gana { border: 1px solid #d9a43a; }
+.historial li.gana b:last-of-type { color: #f0c05a; }
+.historial li.inicio { color: var(--suave); background: transparent; border: 1px dashed var(--borde); }
