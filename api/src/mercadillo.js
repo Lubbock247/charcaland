@@ -350,16 +350,31 @@ async function mandarMensaje(env, canal, textoMsg, adjuntos) {
     { method: "POST", headers: { Authorization: "Bot " + env.DISCORD_BOT_TOKEN }, body: form });
   if (!r.ok) throw new Error("Discord " + r.status + ": " + (await r.text()).slice(0, 200));
 }
-// Correo con Brevo (secretos BREVO_API_KEY y CORREO_REMITENTE, este verificado en Brevo como remitente).
+// Correo desde el Gmail del admin, con un script de Google (Apps Script) publicado como aplicación web.
+// Secretos: CORREO_URL (dirección del script) y CORREO_CLAVE (la misma palabra secreta que hay en el script).
+// El script está copiado en api/correo-gmail.gs. Sin «para», el script se lo manda a su propio dueño (prueba).
 const b64 = buf => { let t = ""; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 8192) t += String.fromCharCode(...u.subarray(i, i + 8192)); return btoa(t); };
-async function mandarCorreo(env, para, asunto, texto, adjuntos) {
-  if (!env.BREVO_API_KEY || !env.CORREO_REMITENTE) throw new Error("correo sin configurar");
-  const r = await fetch("https://api.brevo.com/v3/smtp/email", { method: "POST",
-    headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ sender: { name: "Mercadillo de Charcaland", email: env.CORREO_REMITENTE }, to: [{ email: para }],
-      subject: asunto, textContent: texto.replace(/^🧾 /, "") + "\n\nSi no se entrega, avisad a un admin.",
-      attachment: adjuntos.map(a => ({ name: a.nombre, content: b64(a.datos) })) }) });
-  if (!r.ok) throw new Error("Brevo " + r.status + ": " + (await r.text()).slice(0, 200));
+export async function mandarCorreo(env, para, asunto, texto, adjuntos) {
+  if (!env.CORREO_URL || !env.CORREO_CLAVE) throw new Error("El correo aún no está configurado");
+  const r = await fetch(env.CORREO_URL, { method: "POST", headers: { "Content-Type": "application/json" }, redirect: "follow",
+    body: JSON.stringify({ clave: env.CORREO_CLAVE, para: para || "", asunto,
+      texto: texto.replace(/^🧾 /, "") + "\n\nSi no se entrega, avisad a un admin.",
+      adjuntos: adjuntos.map(a => ({ nombre: a.nombre, tipo: a.tipo, contenido: b64(a.datos) })) }) });
+  const t = await r.text();
+  let d = null; try { d = JSON.parse(t); } catch {}
+  if (!r.ok || !d || !d.ok) throw new Error("Correo: " + (d && d.error ? d.error : r.status + " " + t.slice(0, 120)));
+}
+
+// Solo admins: manda al dueño del Gmail un recibo de ejemplo, para comprobar que el correo funciona.
+export async function correoPrueba(env, u) {
+  if (u.rol !== "admin") return [403, { error: "Solo los administradores pueden hacer esto" }];
+  const datos = { numero: 0, tipo: "Compra", comprador: u.nombre, vendedor: "Mercadillo", fecha: Date.now(),
+    objetos: [{ nombre: "Recibo de prueba", cantidad: 1, precio: 1, encantamientos: ["Si ves esto, el correo funciona"] }] };
+  try {
+    await mandarCorreo(env, "", "Recibo de prueba · Mercadillo de Charcaland", "Esto es una prueba del correo de los recibos.",
+      [{ nombre: "recibo-prueba.png", tipo: "image/png", datos: await reciboPng(datos) }]);
+    return [200, { ok: true }];
+  } catch (e) { return [502, { error: e.message }]; }
 }
 async function canalDM(env, usuario) {
   const r = await fetch("https://discord.com/api/v10/users/@me/channels", { method: "POST",

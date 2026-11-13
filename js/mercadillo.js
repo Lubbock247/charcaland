@@ -301,7 +301,8 @@ async function paginaMercadillo() {
     lista = lista.slice().sort(ORD[estado.orden]);
     caja.innerHTML = (admin ? `<div class="barra-pruebas">
         ${interruptor("prueba", "Modo pruebas", MODO_PRUEBA, "Compras, ventas y pujas como «Jugador de prueba» (empieza con 10.000 monedas)")}
-        <a class="btn g" href="#" id="btnMonedas"><i class="ti ti-coins"></i> Dar o quitar monedas</a></div>` : "") + `<div class="barra-merc">
+        <a class="btn g" href="#" id="btnMonedas"><i class="ti ti-coins"></i> Dar o quitar monedas</a>
+        <a class="btn g" href="#" id="btnCorreo" title="Manda un recibo de ejemplo al Gmail que envía los recibos"><i class="ti ti-mail"></i> Probar correo</a></div>` : "") + `<div class="barra-merc">
         <div class="wtabs">${M_PESTANAS.map(([id, t]) => `<a href="#${id}" class="${id === sel ? "sel" : ""}">${t}</a>`).join("")}</div>
         <div class="filtros">
           <label class="buscar"><i class="ti ti-search"></i><input id="fBuscar" type="search" placeholder="Buscar objeto…" value="${esc(estado.buscar)}"></label>
@@ -397,6 +398,13 @@ async function paginaMercadillo() {
       u = real; hecho();
     };
     const bm = caja.querySelector("#btnMonedas"); if (bm) bm.onclick = e => { e.preventDefault(); ventanaMonedas(refrescarSaldo); };
+    const bc = caja.querySelector("#btnCorreo");
+    if (bc) bc.onclick = async e => {
+      e.preventDefault(); bc.textContent = "Mandando…";
+      try { await api("/api/correo-prueba", { method: "POST" }); alert("Recibo de prueba enviado. Mira tu Gmail (y la carpeta de spam)."); }
+      catch (er) { alert("No se pudo: " + er.message); }
+      pintar();
+    };
     const en = caja.querySelector("#entrarM"); if (en) en.onclick = e => { e.preventDefault(); irALogin(); };
   }
 

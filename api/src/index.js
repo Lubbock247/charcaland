@@ -487,7 +487,7 @@ export default {
         return json(await merc.listar(env, yo && !yo.fuera ? yo : null), 200, cab);
       }
       const mc = ruta.match(/^\/api\/mercadillo(?:\/(\d+)(?:\/(comprar|pujar|lotengo|aceptar))?)?$/);
-      const otras = ["/api/movimientos", "/api/monedas", "/api/usuarios"].includes(ruta) || /^\/api\/recibo\/\d+\.png$/.test(ruta);
+      const otras = ["/api/movimientos", "/api/monedas", "/api/usuarios", "/api/correo-prueba"].includes(ruta) || /^\/api\/recibo\/\d+\.png$/.test(ruta);
       if (mc || otras) {
         const [u, error] = await miembroDe(req, env, cab);
         if (error) return error;
@@ -503,6 +503,7 @@ export default {
         else if (ruta === "/api/movimientos" && req.method === "GET") res = await merc.movimientos(env, u, new URL(req.url));
         else if (ruta === "/api/monedas" && req.method === "POST") res = await merc.darMonedas(env, u, await cuerpo());
         else if (ruta === "/api/usuarios" && req.method === "GET") res = await merc.usuarios(env, u);
+        else if (ruta === "/api/correo-prueba" && req.method === "POST") res = await merc.correoPrueba(env, u);
         else if (ruta.startsWith("/api/recibo/") && req.method === "GET") {
           const png = await merc.imagenRecibo(env, u, ruta.match(/\d+/)[0]);
           if (png === null) return json({ error: "No existe ese recibo" }, 404, cab);
