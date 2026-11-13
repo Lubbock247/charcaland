@@ -31,13 +31,30 @@ function avatarDe(u, t) {
   return u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=${t || 64}`
                   : "https://cdn.discordapp.com/embed/avatars/0.png";
 }
-function salir() { try { localStorage.removeItem("dc_token"); } catch {} location.reload(); }
+async function salir() {
+  let t = null; try { t = localStorage.getItem("dc_token"); } catch {}
+  // Cuenta sin Discord: se cierra también la sesión en la API.
+  if (t && t.startsWith("cl_")) { try { await api("/api/cuenta/salir", { method: "POST" }); } catch {} }
+  try { localStorage.removeItem("dc_token"); } catch {} location.reload();
+}
 // Devuelve {id, nombre, saldo, rol} o null si no hay sesión.
 // Si ha entrado pero no está en el Discord del servidor, devuelve null y FUERA dice por qué.
 let FUERA = null;
 const SESION = (async () => {
   let t = null;
   try { t = localStorage.getItem("dc_token"); } catch {}
+  // Vuelta de «Conectar con Discord» (cuenta sin Discord): se pasa la cuenta a la de Discord con la que entró.
+  let local = null;
+  try { local = sessionStorage.getItem("conectar_cl"); sessionStorage.removeItem("conectar_cl"); } catch {}
+  if (local && t && !t.startsWith("cl_") && CONFIG.api) {
+    try {
+      const r = await fetch(CONFIG.api + "/api/cuenta/conectar", { method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + local }, body: JSON.stringify({ discord: t }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { try { localStorage.setItem("dc_token", local); } catch {} t = local; alert(d.error || "No se pudo conectar con Discord"); }
+      else alert("¡Listo! Tu cuenta ya es la de Discord. A partir de ahora entra con Discord.");
+    } catch { try { localStorage.setItem("dc_token", local); } catch {} t = local; alert("No se pudo conectar con Discord"); }
+  }
   if (!t || !CONFIG.api) return null;
   try {
     const r = await fetch(CONFIG.api + "/api/yo", { headers: { Authorization: "Bearer " + t } });
@@ -312,8 +329,19 @@ const render = {
       <div><h2 style="margin:0">${esc(u.nombre)}</h2>
       <span class="etiqueta ${u.rol === "admin" ? "" : "gris"}">${u.rol === "admin" ? "Administrador" : "Jugador"}</span>
       <p class="saldo" style="font-size:1.4rem;margin:8px 0">${u.saldo} monedas</p>
-      <a class="btn g" href="#" id="btnSalir">Salir</a></div></div>`;
+      <a class="btn g" href="#" id="btnSalir">Salir</a></div></div>
+      ${u.sin_discord ? `<div class="tarjeta conectar-dc"><h3><i class="ti ti-brand-discord"></i> Conectar con Discord</h3>
+        <p>Entra con la cuenta de Discord que vayas a usar. Todo lo tuyo (monedas, anuncios, recibos) pasará a esa cuenta,
+        que será tu cuenta de administrador. Después, este acceso con correo y contraseña dejará de funcionar.</p>
+        <a class="btn" href="#" id="btnConectar">Conectar con Discord</a></div>` : ""}`;
     document.getElementById("btnSalir").onclick = e => { e.preventDefault(); salir(); };
+    const bc = document.getElementById("btnConectar");
+    if (bc) bc.onclick = e => {
+      e.preventDefault();
+      if (!confirm("¿Pasar tu cuenta a la de Discord con la que entres? No se puede deshacer.")) return;
+      try { sessionStorage.setItem("conectar_cl", localStorage.getItem("dc_token")); } catch {}
+      irALogin();
+    };
   },
   async inicio() {
     const [ups, evs] = await Promise.all([api("/api/noticias/updates").catch(() => []), api("/api/noticias/eventos").catch(() => [])]);

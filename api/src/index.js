@@ -2,6 +2,7 @@
 import { reciboPng } from "./recibo.js";
 import * as merc from "./mercadillo.js";
 import { revisarClear } from "./comandos.js";
+import * as cuentas from "./cuentas.js";
 // Cada petición lleva el token de Discord del usuario; aquí se comprueba
 // con Discord que es válido y que se creó para ESTA aplicación.
 
@@ -32,6 +33,13 @@ async function usuarioDe(req, env) {
   }
   const auth = req.headers.get("Authorization") || "";
   if (!auth.startsWith("Bearer ")) return null;
+  // Cuenta sin Discord (token «cl_…»): mismos datos y mismo rol que su cuenta de Discord.
+  if (auth.startsWith("Bearer cl_")) {
+    const f = await cuentas.usuarioLocal(env, auth.slice(7));
+    if (!f) return null;
+    const admins = await cuentas.listaAdmins(env);
+    return { ...f, rol: admins.includes(f.id) ? "admin" : "usuario", sin_discord: true };
+  }
   const r = await fetch("https://discord.com/api/oauth2/@me", { headers: { Authorization: auth } });
   if (!r.ok) return null;
   const d = await r.json();
@@ -42,7 +50,7 @@ async function usuarioDe(req, env) {
     "INSERT INTO usuarios (id, nombre, avatar) VALUES (?1, ?2, ?3) ON CONFLICT(id) DO UPDATE SET nombre = ?2, avatar = ?3"
   ).bind(u.id, nombre, u.avatar).run();
   const fila = await env.DB.prepare("SELECT id, nombre, avatar, saldo, en_servidor, revisado FROM usuarios WHERE id = ?1").bind(u.id).first();
-  const admins = env.ADMIN_IDS.split(",").map(s => s.trim()).filter(Boolean);
+  const admins = await cuentas.listaAdmins(env); // con el cambio de id del admin que conectó Discord
   const { en_servidor, revisado, ...datos } = fila;
   const res = { ...datos, rol: admins.includes(u.id) ? "admin" : "usuario" };
   // Requisito: estar en el servidor de Discord. Sesiones antiguas sin el permiso "guilds" deben volver a entrar.
@@ -397,6 +405,21 @@ export default {
           { nombre: "Manzana dorada", cantidad: 8, precio: 12 },
           { nombre: "Libro encantado", cantidad: 2, precio: 75, encantamientos: ["Reparación"] }] });
         return new Response(png, { headers: { "Content-Type": "image/png" } });
+      }
+      // Cuenta sin Discord: estado del enlace, entrar, salir y conectar con Discord.
+      const cu = ruta.match(/^\/api\/cuenta\/(enlace|entrar|salir|conectar)$/);
+      if (cu && req.method === "POST") {
+        const d = await req.json().catch(() => ({}));
+        const auth = req.headers.get("Authorization") || "";
+        const local = auth.startsWith("Bearer cl_") ? auth.slice(7) : null;
+        const [est, cuerpo] =
+          cu[1] === "enlace" ? await cuentas.estadoEnlace(env, d.codigo) :
+          cu[1] === "entrar" ? await cuentas.entrar(env, d) :
+          cu[1] === "salir" ? (local ? await cuentas.salir(env, local) : [200, { ok: true }]) :
+          local ? await cuentas.conectarDiscord(env, local, String(d.discord || ""),
+            esLocal(req, env) && d.prueba ? { application: { id: env.DISCORD_CLIENT_ID }, user: d.prueba } : null)
+          : [401, { error: "No has entrado con tu enlace" }];
+        return json(cuerpo, est, cab);
       }
       if (ruta === "/api/yo" && req.method === "GET") {
         const u = await comoPrueba(req, env, await usuarioDe(req, env));

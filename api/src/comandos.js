@@ -5,6 +5,7 @@
 // El Cron lo mira cada minuto, así que tarda hasta 1 minuto en hacerse.
 // El bot solo puede borrar sus propios mensajes; el «/clear» que escribes lo borras tú.
 
+import { listaAdmins } from "./cuentas.js";
 const API = "https://discord.com/api/v10";
 const bot = env => ({ Authorization: "Bot " + env.DISCORD_BOT_TOKEN, "Content-Type": "application/json" });
 
@@ -36,7 +37,7 @@ const masNuevo = (a, b) => BigInt(a) > BigInt(b);
 
 export async function revisarClear(env) {
   if (!env.DISCORD_BOT_TOKEN) return;
-  const admins = env.ADMIN_IDS.split(",").map(s => s.trim()).filter(Boolean);
+  const admins = await listaAdmins(env); // incluye el cambio de id del admin que conectó Discord
   for (const admin of admins) {
     try {
       const dm = await fetch(`${API}/users/@me/channels`, { method: "POST", headers: bot(env), body: JSON.stringify({ recipient_id: admin }) });

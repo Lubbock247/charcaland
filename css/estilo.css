@@ -511,3 +511,8 @@ a.det-img:hover { outline: 2px solid var(--acento); }
 .historial li.gana { border: 1px solid #d9a43a; }
 .historial li.gana b:last-of-type { color: #f0c05a; }
 .historial li.inicio { color: var(--suave); background: transparent; border: 1px dashed var(--borde); }
+/* Entrar sin Discord */
+.form-entrar { max-width: 420px; margin: 0 auto; }
+.form-entrar h1 { font-size: 1.6rem; margin: 0 0 8px; }
+.form-entrar label small { color: var(--suave); font-weight: 400; }
+.conectar-dc { margin-top: 16px; max-width: 480px; } .conectar-dc h3 i { color: #8a9cff; } .conectar-dc p { margin: 6px 0 12px; }

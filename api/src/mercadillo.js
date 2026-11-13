@@ -350,6 +350,17 @@ async function mandarMensaje(env, canal, textoMsg, adjuntos) {
     { method: "POST", headers: { Authorization: "Bot " + env.DISCORD_BOT_TOKEN }, body: form });
   if (!r.ok) throw new Error("Discord " + r.status + ": " + (await r.text()).slice(0, 200));
 }
+// Correo con Brevo (secretos BREVO_API_KEY y CORREO_REMITENTE, este verificado en Brevo como remitente).
+const b64 = buf => { let t = ""; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 8192) t += String.fromCharCode(...u.subarray(i, i + 8192)); return btoa(t); };
+async function mandarCorreo(env, para, asunto, texto, adjuntos) {
+  if (!env.BREVO_API_KEY || !env.CORREO_REMITENTE) throw new Error("correo sin configurar");
+  const r = await fetch("https://api.brevo.com/v3/smtp/email", { method: "POST",
+    headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ sender: { name: "Mercadillo de Charcaland", email: env.CORREO_REMITENTE }, to: [{ email: para }],
+      subject: asunto, textContent: texto.replace(/^🧾 /, "") + "\n\nSi no se entrega, avisad a un admin.",
+      attachment: adjuntos.map(a => ({ name: a.nombre, content: b64(a.datos) })) }) });
+  if (!r.ok) throw new Error("Brevo " + r.status + ": " + (await r.text()).slice(0, 200));
+}
 async function canalDM(env, usuario) {
   const r = await fetch("https://discord.com/api/v10/users/@me/channels", { method: "POST",
     headers: { Authorization: "Bot " + env.DISCORD_BOT_TOKEN, "Content-Type": "application/json" },
@@ -393,6 +404,17 @@ export async function enviarRecibo(env, numero) {
   for (const [canal, msg, adjuntos] of envios) {
     try { await mandarMensaje(env, await canal(), msg, adjuntos); bien++; }
     catch (e) { console.error("Recibo " + numero, e.message); } // p. ej. alguien con los DM cerrados
+  }
+  // Quien tiene correo apuntado (la cuenta sin Discord) lo recibe también por correo, con los mismos adjuntos.
+  const correos = await env.DB.prepare("SELECT id, correo FROM usuarios WHERE id IN (?1, ?2) AND correo IS NOT NULL")
+    .bind(r.comprador_id, r.vendedor_id).all();
+  for (const c of correos.results) {
+    const comprador = c.id === r.comprador_id;
+    try {
+      await mandarCorreo(env, c.correo, `Recibo ${n} · ${comprador ? "Compra" : "Venta"}: ${titulo}`,
+        comprador ? envios[0][1] : envios[1][1], comprador ? compra : venta);
+      bien++;
+    } catch (e) { console.error("Correo recibo " + numero, e.message); }
   }
   // Si no salió ninguno (Discord caído), se deja para que el Cron lo reintente.
   if (!bien) await env.DB.prepare("UPDATE recibos SET enviado = 0 WHERE numero = ?1").bind(numero).run();
