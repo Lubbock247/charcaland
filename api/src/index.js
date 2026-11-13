@@ -1,6 +1,7 @@
 // API de Charcaland: cuentas con Discord, roles y saldo.
 import { reciboPng } from "./recibo.js";
 import * as merc from "./mercadillo.js";
+import { revisarClear } from "./comandos.js";
 // Cada petición lleva el token de Discord del usuario; aquí se comprueba
 // con Discord que es válido y que se creó para ESTA aplicación.
 
@@ -499,5 +500,6 @@ export default {
   async scheduled(evento, env, ctx) {
     // Cierra subastas y manda los recibos pendientes (los de subastas y los que fallaron).
     ctx.waitUntil(merc.cerrarSubastas(env).then(() => merc.enviarPendientes(env)));
+    ctx.waitUntil(revisarClear(env)); // «/clear» de los admins en el privado con el bot
   },
 };
