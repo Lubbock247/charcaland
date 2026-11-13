@@ -1,6 +1,6 @@
 # Plan del mercadillo (decidido con el usuario, 12/11/2026)
 
-Estado: **solo diseño hablado y librerías descargadas.** No hay nada programado todavía.
+Estado: **programado y en la web** (ver «Estado» al final).
 
 ## Monedas
 - Las dan y las quitan los admins desde la web, siempre con un motivo, y queda en el registro. Con eso también se arreglan las compras que no se entregan: se devuelve a uno y se quita al otro; la entrega se revisa en el juego.
@@ -31,14 +31,13 @@ Estado: **solo diseño hablado y librerías descargadas.** No hay nada programad
 - npm: `satori`, `satori-html`, `@resvg/resvg-wasm` (en `api/package.json`).
 - Fuentes: `api/src/fuentes/nunito-400.ttf` y `nunito-800.ttf` (fontsource, Nunito 5.1.0).
 
-## Estado de la API (12/11/2026)
-- Hecha en `api/src/mercadillo.js` y tablas en `api/mercadillo.sql` (aún **sin aplicar** en la base de datos real ni desplegada).
-- Probado en local con usuarios de prueba: comprar, Busco («Lo tengo» + «Aceptar»), pujar, devolución al superar la puja, prórroga de 30 s, cierre por Cron, monedas de admin con motivo, no quedar en negativo, recibos PNG (solo comprador, vendedor y admins).
-- La imagen del objeto se guarda con el anuncio y sale en los datos del recibo para mandarla **adjunta** (no dentro del recibo).
-- Provisional: en la subasta el recibo pone el lote en una sola línea con los objetos debajo.
+## Estado (13/11/2026)
+Programado, subido y funcionando: API, página, recibos por DM, canal y correo. Detalle de lo hecho y lo pendiente en `traspaso.md`.
+Cambios sobre lo de arriba que pidió el usuario: sin categorías (buscador y orden por fecha o precio), imagen por objeto,
+subasta sin puja mínima (siempre +1), pestaña Inicio en vez de Todo, número de anuncio #0001 compartido con el recibo,
+editar y quitar desde la tarjeta, modo pruebas para admins.
 
-## Orden para seguir
-1. Plantilla del recibo y una foto de prueba para enseñársela al usuario.
-2. Base de datos y API del mercadillo (anuncios, pujas, movimientos de monedas, recibos).
-3. Página del mercadillo con los cambios de arriba.
-4. Conectar los recibos (DM y canal privado).
+## Siguiente
+- Revisar lo pendiente de `traspaso.md` (correo a Rolfin, reintento del correo, cambiar contraseña).
+- Tu tienda en el perfil (ver, crear, editar y quitar tus anuncios), más adelante.
+- Aviso por DM a quien superan una puja (aún no se manda).

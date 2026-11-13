@@ -97,3 +97,15 @@ Apunta aquí lo que veas raro:
 ## Mercadillo, parte 1: recibo en imagen
 - Probado en local (`wrangler dev`): la API genera el PNG del recibo con datos inventados (ruta `/api/recibo-prueba`, solo responde en 127.0.0.1).
 - Sin probar: generarlo en el Worker publicado en Cloudflare (aún no desplegado; el paquete pesa 1,8 MB comprimido, por debajo del límite de 3 MB).
+
+## Mercadillo, recibos, /clear y cuenta sin Discord (13/11/2026)
+
+**Ya comprobado:** venta con modo pruebas y recibo por DM (usuario); correo de prueba a tu Gmail (usuario); en local: pujas e historial, editar, número #0001, /clear lee tu DM, cuenta de Rolfin (enlace, contraseña, traspaso simulado).
+
+**Pendiente:**
+- [ ] Una compra o venta entre dos personas reales: recibo a los dos por DM y en el canal.
+- [ ] Subasta con dos personas: la otra ve la puja nueva en unos segundos sin recargar.
+- [ ] `/clear` respondiendo a un mensaje borra ese; sin responder, borra todos (hasta 1 min).
+- [ ] Rolfin entra con su enlace la primera vez y luego con su contraseña.
+- [ ] A Rolfin le llega el recibo por correo (mirar spam).
+- [ ] Rolfin pulsa «Conectar con Discord» y su cuenta pasa a la de Discord (sigue siendo admin, el enlace deja de servir).
