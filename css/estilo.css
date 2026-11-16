@@ -432,9 +432,6 @@ button.opcion-voto:hover { border-color: var(--acento); }
 .pie-anuncio button:disabled { background: var(--panel2); color: var(--suave); cursor: default; filter: none; }
 .pie-anuncio .ganando { color: #f0c05a; font-weight: 700; font-size: .88rem; white-space: nowrap; }
 .tipos-anuncio.fijo input:disabled + span { opacity: .35; cursor: default; }
-.barra-pruebas { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; padding: 10px 12px; border: 1px dashed #d9a43a; border-radius: 10px; background: rgba(217,164,58,.06); }
-.barra-pruebas .interruptor { margin: 0; flex: 1; min-width: 260px; background: transparent; border: 0; padding: 0; }
-.barra-pruebas .btn { margin: 0; padding: 8px 14px; }
 .form-monedas { text-align: left; border: 0; padding: 0; background: transparent; }
 .form-monedas h2 { text-align: center; }
 .anuncio .foto .mis-botones i, .anuncio .foto .cuenta i { font-size: inherit; color: inherit; }
@@ -583,3 +580,83 @@ main:has(#perfil) { max-width: 1100px; }
 .jugar { margin-top: 32px; text-align: center; color: var(--suave); padding: 18px; border: 1px dashed var(--borde); border-radius: 12px; }
 main:has(.tres-inicio) { max-width: 1100px; }
 @media (max-width: 800px) { .tres-inicio { grid-template-columns: 1fr; } .hero .logo-grande { font-size: 2.6rem; } }
+
+/* ===== Misiones ===== */
+.estado { font-size: .78rem; font-weight: 700; padding: 2px 9px; border-radius: 99px; background: var(--panel2); color: var(--suave); white-space: nowrap; }
+.estado.curso { background: rgba(58,143,217,.18); color: #7fbcf2; }
+.estado.revisar { background: rgba(217,164,58,.18); color: #f0c05a; }
+.premio { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.premio .mon { color: #f5c542; font-weight: 800; white-space: nowrap; }
+.premio .mon i, .premio .ob i { vertical-align: -2px; }
+.premio .ob { background: var(--panel2); border-radius: 99px; padding: 1px 9px; font-size: .8rem; white-space: nowrap; }
+.contadores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+.contador { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; color: var(--texto); text-decoration: none; }
+.contador:hover { border-color: var(--acento); }
+.contador i { font-size: 1.6rem; color: var(--acento); }
+.contador b { font-size: 1.25rem; display: block; line-height: 1.2; }
+.contador span { color: var(--suave); font-size: .82rem; }
+.nota-m { margin: 0 0 14px; }
+.diario { display: flex; flex-direction: column; gap: 8px; }
+.fila-m { display: flex; align-items: center; gap: 14px; background: var(--panel); border: 1px solid var(--borde); border-left: 4px solid var(--borde); border-radius: 10px; padding: 12px 16px; }
+.fila-m.t-personal { border-left-color: var(--acento); }
+.fila-m.t-global { border-left-color: #3a8fd9; }
+.fila-m.t-encargo { border-left-color: var(--acento2); }
+.fila-m.apagada { opacity: .55; }
+.fila-m .ico { flex: none; width: 42px; height: 42px; border-radius: 10px; background: var(--panel2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+.fila-m.t-personal .ico { color: var(--acento); } .fila-m.t-global .ico { color: #7fbcf2; } .fila-m.t-encargo .ico { color: #b79bff; }
+.fila-m .txt { flex: 1; min-width: 0; }
+.fila-m h3 { margin: 0; font-size: 1.02rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; overflow-wrap: anywhere; }
+.fila-m p { margin: 0; color: var(--suave); font-size: .86rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fila-m .de { color: var(--suave); font-size: .8rem; }
+.fila-m .premio { flex: none; max-width: 230px; justify-content: flex-end; }
+.fila-m .botones { flex: none; display: flex; align-items: center; gap: 6px; }
+.fila-m .botones:empty { display: none; }
+.fila-m .botones button { margin: 0; padding: 8px 14px; font-size: .9rem; white-space: nowrap; }
+button.sec { background: transparent; border: 1px solid var(--borde); color: var(--texto); font-weight: 600; }
+button.sec:hover { border-color: var(--acento); filter: none; }
+button.sec:disabled { color: var(--suave); cursor: default; border-color: var(--borde); }
+.papelera { width: 32px; height: 32px; border-radius: 8px; color: var(--suave); display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 1.1rem; }
+.papelera:hover { color: #ff6b6a; background: rgba(226,75,74,.1); }
+.ventana-mision { max-width: 560px; }
+.form-mision { text-align: left; border: 0; padding: 0; background: transparent; }
+.form-mision h2 { text-align: center; }
+.form-mision label small { color: var(--suave); font-weight: 400; }
+.form-mision textarea.mini { min-height: 46px; height: 46px; }
+@media (max-width: 760px) {
+  .contadores { grid-template-columns: 1fr; }
+  .fila-m { flex-wrap: wrap; }
+  .fila-m .txt { flex-basis: calc(100% - 60px); }
+  .fila-m .premio { max-width: none; justify-content: flex-start; flex: 1; }
+}
+/* Administración por pestañas */
+.adm-tabs { margin: 0 0 18px; border-bottom: 1px solid var(--borde); }
+.adm { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; align-items: start; }
+.adm-lista { display: flex; flex-direction: column; gap: 2px; max-height: 75vh; overflow-y: auto; }
+.adm-lista a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--texto); text-decoration: none; }
+.adm-lista a:hover { background: var(--panel2); }
+.adm-lista a.sel { background: var(--acento); color: #0d1a10; font-weight: 700; }
+.adm-lista a em { margin-left: auto; font-style: normal; font-size: .8rem; opacity: .75; }
+.adm-lista a > i { font-size: 1.2rem; width: 26px; text-align: center; }
+.adm-lista .avatar { width: 26px; height: 26px; }
+.adm-lista .sep { margin: 8px 10px 4px; font-size: .75rem; letter-spacing: 1px; text-transform: uppercase; color: var(--suave); }
+.adm-panel h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 1.2rem; }
+.adm-panel h2 > i { color: var(--acento); }
+.adm-panel h2 .btn { margin: 0 0 0 auto; padding: 7px 14px; font-size: .9rem; }
+.adm-panel h2 small { color: var(--suave); font-weight: 400; font-size: .85rem; }
+.adm-panel h2 small.lleno { margin-left: auto; color: #f0c05a; }
+.adm-panel h2.sub2 { margin-top: 24px; }
+@media (max-width: 800px) { .adm { grid-template-columns: 1fr; } .adm-lista { max-height: 240px; } }
+/* Encargos: ventana de pago y bloque del perfil */
+.ayuda.centro { text-align: center; }
+.opcion-pago { display: flex; align-items: flex-start; gap: 10px; margin: 10px 0 0; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo); cursor: pointer; font-weight: 400; }
+.opcion-pago:has(input:checked) { border-color: var(--acento); }
+.opcion-pago input { width: auto; margin-top: 5px; }
+.opcion-pago small { display: block; color: var(--suave); font-size: .82rem; }
+.ventana-mision .precio-grande { font-size: 1.6rem; font-weight: 800; color: #f5c542; text-align: center; margin: 8px 0; }
+.mis-encargos { margin-top: 24px; }
+.mis-encargos h2 { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; margin: 0 0 6px; }
+.mis-encargos h2 i { color: #b79bff; }
+.mis-encargos h2 a { margin-left: auto; font-size: .9rem; font-weight: 600; text-decoration: none; }
+.mis-encargos > h3 { margin: 14px 0 8px; font-size: .8rem; letter-spacing: 1px; text-transform: uppercase; color: var(--suave); }
+.mis-encargos > h3.por-verificar { color: #f0c05a; }
+.mis-encargos .fila-m { background: var(--fondo); }

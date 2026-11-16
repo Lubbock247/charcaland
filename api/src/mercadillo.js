@@ -341,7 +341,7 @@ export async function datosRecibo(env, numero) {
 // ---- Enviar recibos con el bot ----
 // Un mensaje con el recibo PNG y, si el anuncio tiene foto, la foto adjunta en el mismo mensaje.
 // Va a: DM del comprador, DM del vendedor y el canal de registro de ventas (RECIBOS_CANAL).
-async function mandarMensaje(env, canal, textoMsg, adjuntos) {
+export async function mandarMensaje(env, canal, textoMsg, adjuntos) {
   const form = new FormData();
   form.append("payload_json", JSON.stringify({ content: textoMsg, allowed_mentions: { parse: [] },
     attachments: adjuntos.map((a, i) => ({ id: i, filename: a.nombre })) }));
@@ -365,18 +365,7 @@ export async function mandarCorreo(env, para, asunto, texto, adjuntos) {
   if (!r.ok || !d || !d.ok) throw new Error("Correo: " + (d && d.error ? d.error : r.status + " " + t.slice(0, 120)));
 }
 
-// Solo admins: manda al dueño del Gmail un recibo de ejemplo, para comprobar que el correo funciona.
-export async function correoPrueba(env, u) {
-  if (u.rol !== "admin") return [403, { error: "Solo los administradores pueden hacer esto" }];
-  const datos = { numero: 0, tipo: "Compra", comprador: u.nombre, vendedor: "Mercadillo", fecha: Date.now(),
-    objetos: [{ nombre: "Recibo de prueba", cantidad: 1, precio: 1, encantamientos: ["Si ves esto, el correo funciona"] }] };
-  try {
-    await mandarCorreo(env, "", "Recibo de prueba · Mercadillo de Charcaland", "Esto es una prueba del correo de los recibos.",
-      [{ nombre: "recibo-prueba.png", tipo: "image/png", datos: await reciboPng(datos) }]);
-    return [200, { ok: true }];
-  } catch (e) { return [502, { error: e.message }]; }
-}
-async function canalDM(env, usuario) {
+export async function canalDM(env, usuario) {
   const r = await fetch("https://discord.com/api/v10/users/@me/channels", { method: "POST",
     headers: { Authorization: "Bot " + env.DISCORD_BOT_TOKEN, "Content-Type": "application/json" },
     body: JSON.stringify({ recipient_id: usuario }) });

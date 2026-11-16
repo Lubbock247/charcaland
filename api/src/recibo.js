@@ -31,14 +31,16 @@ const dato = (k, v) => `
     <span style="color:${C.texto};font-size:19px">${v}</span>
   </div>`;
 
-const total = (k, v, fuerte) => `
-  <div style="display:flex;justify-content:space-between;width:280px;padding:5px 0;${fuerte ? `border-top:2px solid ${C.celeste};margin-top:6px;padding-top:10px;` : ""}">
+const total = (k, v, fuerte, A = C.celeste) => `
+  <div style="display:flex;justify-content:space-between;width:280px;padding:5px 0;${fuerte ? `border-top:2px solid ${A};margin-top:6px;padding-top:10px;` : ""}">
     <span style="color:${fuerte ? C.texto : C.suave};font-weight:${fuerte ? 800 : 400}">${k}</span>
-    <span style="color:${fuerte ? C.celeste : C.texto};font-weight:${fuerte ? 800 : 400}">${v}</span>
+    <span style="color:${fuerte ? A : C.texto};font-weight:${fuerte ? 800 : 400}">${v}</span>
   </div>`;
 
+// Opcionales: color (acento; morado en los encargos), rotulos { tipo, comprador, vendedor } y pie [izquierda, derecha].
 // r: { numero, tipo, comprador, vendedor, fecha (Date o ms), objetos: [{ nombre, cantidad, precio (por unidad), encantamientos?: ["Eficiencia V", ...] }] }
 export function plantilla(r) {
+  const A = r.color || C.celeste, R = r.rotulos || {}, pie = r.pie || ["Mercadillo de Charcaland · Ghestec", "Si no se entrega, avisad a un admin."];
   const f = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit",
     year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(r.fecha));
   const subtotal = r.objetos.reduce((s, o) => s + o.cantidad * o.precio, 0);
@@ -46,14 +48,14 @@ export function plantilla(r) {
   const filas = r.objetos.map(o => `
     <div style="display:flex;flex-direction:column;padding:12px 0;border-bottom:1px solid ${C.linea};font-size:18px">
       <div style="display:flex;align-items:center">
-        <span style="width:56px;color:${C.celeste};font-weight:800">${esc(o.cantidad)}×</span>
+        <span style="width:56px;color:${A};font-weight:800">${esc(o.cantidad)}×</span>
         <span style="flex:1;color:${C.texto}">${esc(o.nombre)}</span>
         <span style="width:110px;text-align:right;color:${C.suave}">${esc(o.precio)}</span>
         <span style="width:110px;text-align:right;color:${C.texto}">${esc(o.cantidad * o.precio)}</span>
       </div>
       ${(o.encantamientos || []).map(e => `
       <div style="display:flex;margin:4px 0 0 56px;color:${C.suave};font-size:15px">
-        <span style="color:${C.celeste};margin-right:8px">–</span><span>${esc(e)}</span>
+        <span style="color:${A};margin-right:8px">–</span><span>${esc(e)}</span>
       </div>`).join("")}
     </div>`).join("");
   const cab = t => `<span style="font-size:13px;letter-spacing:1px;color:${C.suave}">${t}</span>`;
@@ -66,15 +68,15 @@ export function plantilla(r) {
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end">
         <span style="color:${C.suave};font-size:14px;letter-spacing:2px">RECIBO</span>
-        <span style="color:${C.celeste};font-weight:800;font-size:28px">#${String(r.numero).padStart(4, "0")}</span>
+        <span style="color:${A};font-weight:800;font-size:28px">#${String(r.numero).padStart(4, "0")}</span>
       </div>
     </div>
-    <div style="display:flex;height:3px;background:${C.celeste};margin:18px 0 18px;border-radius:2px"></div>
+    <div style="display:flex;height:3px;background:${A};margin:18px 0 18px;border-radius:2px"></div>
     <div style="display:flex;flex-wrap:wrap">
-      ${dato("TIPO DE VENTA", esc(r.tipo))}
+      ${dato(R.tipo || "TIPO DE VENTA", esc(r.tipo))}
       ${dato("FECHA", esc(f))}
-      ${dato("COMPRADOR", esc(r.comprador))}
-      ${dato("VENDEDOR", esc(r.vendedor))}
+      ${dato(R.comprador || "COMPRADOR", esc(r.comprador))}
+      ${dato(R.vendedor || "VENDEDOR", esc(r.vendedor))}
     </div>
     <div style="display:flex;padding:8px 0;margin-top:6px;border-bottom:1px solid ${C.suave}">
       <div style="display:flex;width:56px">${cab("CANT.")}</div>
@@ -84,13 +86,13 @@ export function plantilla(r) {
     </div>
     ${filas}
     <div style="display:flex;flex-direction:column;align-items:flex-end;margin-top:14px;font-size:18px">
-      ${total("Subtotal", mon(subtotal))}
-      ${total("IVA (0 %)", mon(iva))}
-      ${total("TOTAL", mon(subtotal + iva), true)}
+      ${total("Subtotal", mon(subtotal), false, A)}
+      ${total("IVA (0 %)", mon(iva), false, A)}
+      ${total("TOTAL", mon(subtotal + iva), true, A)}
     </div>
     <div style="display:flex;margin-top:auto;justify-content:space-between;color:${C.suave};font-size:14px">
-      <span>Mercadillo de Charcaland · Ghestec</span>
-      <span>Si no se entrega, avisad a un admin.</span>
+      <span>${esc(pie[0])}</span>
+      <span>${esc(pie[1])}</span>
     </div>
   </div>`;
 }

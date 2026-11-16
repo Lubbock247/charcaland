@@ -6,7 +6,7 @@ Es privada, para el usuario y sus amigos. Repositorio git propio (rama `main`).
 
 ## Estructura
 
-- **Páginas HTML en la raíz:** `index.html`, `eventos.html`, `lore.html`, `mercadillo.html`, `mods.html`, `perfil.html`, `sugerencias.html`, `updates.html`.
+- **Páginas HTML en la raíz:** `index.html`, `admin.html`, `eventos.html`, `lore.html`, `mercadillo.html`, `misiones.html`, `mods.html`, `perfil.html`, `sugerencias.html`, `updates.html`.
 - **`css/estilo.css`:** todos los estilos.
 - **`js/datos.js`:** ajustes que se editan sin tocar el resto (nombre del servidor, enlaces, eventos aún). Las updates ya están en la base de datos. Lo marcado como PROVISIONAL es de ejemplo.
 - **`js/app.js`:** lógica común: cabecera, pie, sesión.
@@ -33,6 +33,7 @@ Es privada, para el usuario y sus amigos. Repositorio git propio (rama `main`).
 - **Votaciones:** un evento con 2 o más opciones es una votación (tablas `opciones` y `votos`, ruta `POST /api/votar`, que pone o quita el voto). Opciones: `multiple` (varias respuestas) y `anonima` (solo los admins ven quién votó). Se vota desde la lista o dentro del evento; en eventos pasados ya no se puede. No hay «cerrar votación»: el usuario no la quiere. Los eventos sin fecha con `en_inicio` salen en la pestaña Inicio. Las updates usan `etiqueta` como versión (`1.0.0`); los eventos no tienen etiqueta ni píldoras de estado.
 - **Eventos en Discord:** los eventos con fecha futura se crean, cambian y borran solos en «Eventos» del servidor de Discord (`sincronizarDiscord` en la API; columna `discord_id`). Necesita el secreto `DISCORD_BOT_TOKEN` del bot de la aplicación, invitado al servidor con permiso de crear y gestionar eventos. Horas en hora de España; sin hora, 18:00 a 20:00.
 - **Por probar:** `por-probar.md` recoge lo que necesita cuentas reales de Discord.
+- **Misiones:** personales, globales y encargos (`misiones.html`, `js/misiones.js`, `api/src/misiones.js`, tablas en `api/misiones.sql`); la pestaña Misiones de Administración también está en `js/misiones.js`. Reglas, estado y cómo probar en local en `traspaso.md`.
 - **Mercadillo:** programado y en la web; diseño en `plan-mercadillo.md`, estado y pendientes en `traspaso.md`. Tablas en `api/mercadillo*.sql`.
 - **Recibos:** PNG (`api/src/recibo.js`) por DM, canal de registro (`RECIBOS_CANAL`) y, a quien tiene correo, por Gmail con un script de Google (`api/correo-gmail.gs`, secretos `CORREO_URL` y `CORREO_CLAVE`).
 - **Bot `/clear`:** en el DM del bot, solo admins (`api/src/comandos.js`); lo lee el Cron cada minuto.

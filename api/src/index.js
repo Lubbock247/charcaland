@@ -3,6 +3,7 @@ import { reciboPng } from "./recibo.js";
 import * as merc from "./mercadillo.js";
 import { revisarClear } from "./comandos.js";
 import * as cuentas from "./cuentas.js";
+import * as mis from "./misiones.js";
 // Cada petición lleva el token de Discord del usuario; aquí se comprueba
 // con Discord que es válido y que se creó para ESTA aplicación.
 
@@ -388,6 +389,8 @@ export default {
       // Foto de prueba del recibo: solo en local (wrangler dev).
       if (ruta === "/api/recibo-prueba" && new URL(req.url).hostname === "127.0.0.1") {
         const tipo = new URL(req.url).searchParams.get("tipo") || "Compra";
+        if (tipo === "Encargo") return new Response(await reciboPng(mis.datosReciboEncargo({ id: 7, titulo: "Necesito 2 stacks de cuarzo", monedas: 120, monedas_min: 80, pagado: 140, extra: 20,
+          objetos: JSON.stringify(["8× Esmeralda"]), de_admin: 0, autor: "Steve", usuario: "Alex", cerrado: Date.now() })), { headers: { "Content-Type": "image/png" } });
         if (tipo === "Subasta") return new Response(await reciboPng({ numero: 3, tipo, comprador: "Steve", vendedor: "Alex", fecha: Date.now(), objetos: [
           { nombre: "Lote de libros", cantidad: 1, precio: 70, encantamientos: ["2× Libro encantado (Reparación)", "1× Libro encantado (Afilado V)"] }] }),
           { headers: { "Content-Type": "image/png" } });
@@ -465,6 +468,26 @@ export default {
         const [est, cuerpo] = await enviarSugerencia(env, u, await req.json());
         return json(cuerpo, est, cab);
       }
+      // ---- Misiones ----
+      const mi = ruta.match(/^\/api\/misiones(?:\/(admin|\d+)(?:\/(aceptar|completar|abandonar|devolver|aprobar))?)?$/);
+      if (mi && !mi[1] && req.method === "GET") {
+        const u = req.headers.get("Authorization") || local ? await usuarioDe(req, env) : null;
+        return json(await mis.listar(env, u && !u.fuera ? u : null), 200, cab);
+      }
+      if (mi) {
+        const [u, error] = await miembroDe(req, env, cab);
+        if (error) return error;
+        const id = /^\d+$/.test(mi[1] || "") ? mi[1] : null;
+        let res = null;
+        if (mi[1] === "admin" && !mi[2] && req.method === "GET") res = await mis.listarAdmin(env, u);
+        else if (!mi[1] && req.method === "POST") res = await mis.crear(env, u, await req.json().catch(() => ({})));
+        else if (id && !mi[2] && req.method === "DELETE") res = await mis.borrar(env, u, id);
+        else if (id && mi[2] && req.method === "POST") res = await mis[mi[2]](env, u, id, await req.json().catch(() => ({})));
+        // Al completarse un encargo, su recibo (morado) va al canal de registro sin hacer esperar.
+        if (res && res[1].recibo_encargo) ctx.waitUntil(mis.enviarReciboEncargo(env, res[1].recibo_encargo));
+        if (res) return json(res[1], res[0], cab);
+        return json({ error: "No existe" }, 404, cab);
+      }
       // ---- Mercadillo ----
       const im = ruta.match(/^\/api\/imagen\/(\d+)$/);
       if (im && req.method === "GET") {
@@ -477,7 +500,7 @@ export default {
         return json(await merc.listar(env, u && !u.fuera ? u : null), 200, cab);
       }
       const mc = ruta.match(/^\/api\/mercadillo(?:\/(\d+)(?:\/(comprar|pujar|lotengo|aceptar))?)?$/);
-      const otras = ["/api/movimientos", "/api/monedas", "/api/usuarios", "/api/correo-prueba"].includes(ruta) || /^\/api\/recibo\/\d+\.png$/.test(ruta);
+      const otras = ["/api/movimientos", "/api/monedas", "/api/usuarios"].includes(ruta) || /^\/api\/recibo\/\d+\.png$/.test(ruta);
       if (mc || otras) {
         const [u, error] = await miembroDe(req, env, cab);
         if (error) return error;
@@ -493,7 +516,6 @@ export default {
         else if (ruta === "/api/movimientos" && req.method === "GET") res = await merc.movimientos(env, u, new URL(req.url));
         else if (ruta === "/api/monedas" && req.method === "POST") res = await merc.darMonedas(env, u, await cuerpo());
         else if (ruta === "/api/usuarios" && req.method === "GET") res = await merc.usuarios(env, u);
-        else if (ruta === "/api/correo-prueba" && req.method === "POST") res = await merc.correoPrueba(env, u);
         else if (ruta.startsWith("/api/recibo/") && req.method === "GET") {
           const png = await merc.imagenRecibo(env, u, ruta.match(/\d+/)[0]);
           if (png === null) return json({ error: "No existe ese recibo" }, 404, cab);
@@ -513,7 +535,7 @@ export default {
   // Cron Trigger (cada minuto): cierra las subastas que han terminado.
   async scheduled(evento, env, ctx) {
     // Cierra subastas y manda los recibos pendientes (los de subastas y los que fallaron).
-    ctx.waitUntil(merc.cerrarSubastas(env).then(() => merc.enviarPendientes(env)));
+    ctx.waitUntil(merc.cerrarSubastas(env).then(() => merc.enviarPendientes(env)).then(() => mis.enviarPendientes(env)));
     ctx.waitUntil(revisarClear(env)); // «/clear» de los admins en el privado con el bot
   },
 };

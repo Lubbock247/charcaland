@@ -231,7 +231,6 @@ function nuevoAnuncio(alGuardar, ed) {
 async function paginaMercadillo() {
   const caja = document.getElementById("mercado");
   const u = await SESION;
-  const admin = u && u.rol === "admin";
   let items = [];
   const estado = { buscar: "", orden: "recientes" };
   async function cargar() {
@@ -274,8 +273,7 @@ async function paginaMercadillo() {
     const ORD = { recientes: (a, b) => b.id - a.id, antiguos: (a, b) => a.id - b.id,
       caro: (a, b) => precioDe(b) - precioDe(a), barato: (a, b) => precioDe(a) - precioDe(b) };
     lista = lista.slice().sort(ORD[estado.orden]);
-    caja.innerHTML = (admin ? `<div class="barra-pruebas">
-        <a class="btn g" href="#" id="btnCorreo" title="Manda un recibo de ejemplo al Gmail que envía los recibos"><i class="ti ti-mail"></i> Probar correo</a></div>` : "") + `<div class="barra-merc">
+    caja.innerHTML = `<div class="barra-merc">
         <div class="wtabs">${M_PESTANAS.map(([id, t]) => `<a href="#${id}" class="${id === sel ? "sel" : ""}">${t}</a>`).join("")}</div>
         <div class="filtros">
           <label class="buscar"><i class="ti ti-search"></i><input id="fBuscar" type="search" placeholder="Buscar objeto…" value="${esc(estado.buscar)}"></label>
@@ -365,13 +363,6 @@ async function paginaMercadillo() {
     b.oninput = () => { estado.buscar = b.value; pintar(); const n = caja.querySelector("#fBuscar"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
     caja.querySelector("#fOrden").onchange = e => { estado.orden = e.target.value; pintar(); };
     const n = caja.querySelector("#nuevo"); if (n) n.onclick = e => { e.preventDefault(); nuevoAnuncio(cargar); };
-    const bc = caja.querySelector("#btnCorreo");
-    if (bc) bc.onclick = async e => {
-      e.preventDefault(); bc.textContent = "Mandando…";
-      try { await api("/api/correo-prueba", { method: "POST" }); alert("Recibo de prueba enviado. Mira tu Gmail (y la carpeta de spam)."); }
-      catch (er) { alert("No se pudo: " + er.message); }
-      pintar();
-    };
     const en = caja.querySelector("#entrarM"); if (en) en.onclick = e => { e.preventDefault(); irALogin(); };
   }
 

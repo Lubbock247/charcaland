@@ -1,6 +1,6 @@
 const PAGINAS = [
   ["index.html", "Inicio"], ["updates.html", "Updates"], ["mods.html", "Mods"],
-  ["eventos.html", "Eventos"], ["lore.html", "Lore"], ["mercadillo.html", "Mercadillo"], ["sugerencias.html", "Sugerencias"],
+  ["eventos.html", "Eventos"], ["lore.html", "Lore"], ["mercadillo.html", "Mercadillo"], ["misiones.html", "Misiones"], ["sugerencias.html", "Sugerencias"],
 ];
 
 function esc(t) {
@@ -334,13 +334,23 @@ const render = {
   mods() { if (location.hash.length > 1) document.body.classList.add("en-wiki"); iniciarWiki("mods"); },
   eventos() { paginaNoticias("evento"); },
   lore() { iniciarWiki("lore"); },
-  // Administración (solo admins): dar o quitar monedas a un jugador, con motivo.
+  // Administración (solo admins), por pestañas: Monedas (dar o quitar, con motivo) y Misiones (la pinta misiones.js).
   async admin() {
-    const u = await SESION, caja = document.getElementById("admin");
-    if (!u || u.rol !== "admin") { caja.innerHTML = `<div class="vacio">Esta página es solo para administradores.</div>`; return; }
+    const u = await SESION, fuera = document.getElementById("admin");
+    if (!u || u.rol !== "admin") { fuera.innerHTML = `<div class="vacio">Esta página es solo para administradores.</div>`; return; }
+    const PEST = [["monedas", "ti-coins", "Monedas"], ["misiones", "ti-target-arrow", "Misiones"]];
+    let pest = null, caja = null;
+    const cambiar = () => {
+      const h = location.hash.slice(1);
+      pest = PEST.some(p => p[0] === h) ? h : "monedas";
+      fuera.innerHTML = `<div class="wtabs adm-tabs">${PEST.map(([id, i, t]) => `<a href="#${id}" class="${id === pest ? "sel" : ""}"><i class="ti ${i}"></i> ${t}</a>`).join("")}</div><div id="adminCuerpo"><div class="vacio">Cargando…</div></div>`;
+      caja = fuera.querySelector("#adminCuerpo");
+      document.querySelector("main").classList.toggle("ancha", pest === "misiones");
+      if (pest === "misiones") adminMisiones(caja); else cargar();
+    };
     let gente = [], filtro = "";
     const cargar = async () => {
-      try { gente = (await api("/api/usuarios")).filter(p => p.id !== "prueba"); pintar(); }
+      try { gente = (await api("/api/usuarios")).filter(p => p.id !== "prueba"); if (pest === "monedas") pintar(); }
       catch (er) { caja.innerHTML = `<div class="vacio">No se pudo cargar: ${esc(er.message)}</div>`; }
     };
     const pintar = () => {
@@ -377,23 +387,26 @@ const render = {
         e.preventDefault(); f.usuario_id.value = x.dataset.id; f.cantidad.focus(); f.scrollIntoView({ behavior: "smooth", block: "center" });
       });
     };
-    cargar();
+    window.onhashchange = cambiar;
+    cambiar();
   },
   async perfil() {
     const u = await SESION, caja = document.getElementById("perfil");
     if (!u) { caja.innerHTML = `<div class="vacio">Entra con Discord para ver tu perfil.<br><br><a class="btn" href="#" id="entrarPerfil">Entrar con Discord</a></div>`;
       document.getElementById("entrarPerfil").onclick = e => { e.preventDefault(); irALogin(); }; return; }
-    // Cartel con avatar, nombre, rol, resumen y monedas; debajo, la tienda (la pinta mercadillo.js).
+    // Cartel con avatar, nombre, rol, resumen y monedas; debajo, la tienda (la pinta mercadillo.js) y «Mis encargos» (misiones.js).
     caja.innerHTML = `<div class="cartel-perfil"><img src="${avatarDe(u, 128)}" alt="">
       <div><h2>${esc(u.nombre)}<span class="etiqueta ${u.rol === "admin" ? "" : "gris"}">${u.rol === "admin" ? "Administrador" : "Jugador"}</span></h2>
       <p id="resumenTienda">&nbsp;</p></div>
       <div class="der"><b>${Number(u.saldo).toLocaleString("es-ES")}</b> monedas</div></div>
       <div class="toldo"></div><div class="tienda" id="tienda"><div class="vacio">Cargando…</div></div>
+      <div id="misEncargos"></div>
       ${u.sin_discord ? `<div class="tarjeta conectar-dc"><h3><i class="ti ti-brand-discord"></i> Conectar con Discord</h3>
         <p>Entra con la cuenta de Discord que vayas a usar. Todo lo tuyo (monedas, anuncios, recibos) pasará a esa cuenta,
         que será tu cuenta de administrador. Después, este acceso con correo y contraseña dejará de funcionar.</p>
         <a class="btn" href="#" id="btnConectar">Conectar con Discord</a></div>` : ""}`;
     if (typeof paginaTienda === "function") paginaTienda(u);
+    if (typeof perfilEncargos === "function") perfilEncargos(u);
     const bc = document.getElementById("btnConectar");
     if (bc) bc.onclick = e => {
       e.preventDefault();
