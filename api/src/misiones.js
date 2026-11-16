@@ -64,7 +64,7 @@ async function contadores(env, u) {
   const hoy = inicioDia();
   return {
     personales: await cuenta(env, "SELECT COUNT(*) AS n FROM misiones WHERE tipo = 'personal' AND usuario_id = ?1 AND estado IN ('curso','revisar')", u.id),
-    globales: await cuenta(env, "SELECT COUNT(*) AS n FROM misiones WHERE tipo = 'global' AND usuario_id = ?1 AND estado IN ('curso','revisar')", u.id),
+    globales: await cuenta(env, "SELECT COUNT(*) AS n FROM misiones WHERE tipo = 'global' AND usuario_id = ?1 AND estado = 'curso'", u.id),
     encargos: await cuenta(env, "SELECT COUNT(*) AS n FROM misiones WHERE tipo = 'encargo' AND usuario_id = ?1 AND estado IN ('curso','revisar')", u.id),
     globales_hoy: await cuenta(env, "SELECT COUNT(*) AS n FROM misiones_aceptadas WHERE usuario_id = ?1 AND fecha >= ?2", u.id, hoy),
     encargos_hoy: await cuenta(env, "SELECT COUNT(*) AS n FROM misiones WHERE tipo = 'encargo' AND de_admin = 0 AND autor_id = ?1 AND creado >= ?2", u.id, hoy),

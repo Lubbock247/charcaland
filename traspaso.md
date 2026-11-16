@@ -34,11 +34,11 @@ Cambios pedidos por el usuario el 16/11 tras verlo en la web (subidos después, 
 - Filas con el diseño 3 elegido por el usuario (`filaMision`): talón a la izquierda con la recompensa en grande y los objetos, texto en el centro y botones apilados a la derecha.
 - Los encargos que has creado tú no salen en la página de Misiones (ni en Inicio ni en Encargos): solo en tu perfil, donde también se verifican. Al crear uno, la web te lleva al perfil.
 
-Puesto por Claude como **provisional** (el usuario no lo ha decidido):
+Propuesto por Claude y **confirmado por el usuario el 16/11** (salvo lo indicado):
 - Quien crea un encargo solo lo puede borrar mientras nadie lo haya aceptado; después, solo un admin.
-- «Pendiente de revisar» cuenta dentro de las 3 globales a la vez.
+- «Pendiente de revisar» **no** cuenta dentro de las 3 globales a la vez (decidido por el usuario el 16/11; cambiado en `api/src/misiones.js`, sin desplegar).
 - Nadie acepta su propio encargo.
-- Interpretado por Claude, sin confirmar: «los encargos que hiciste» del perfil son los que has creado (no los que has realizado para otros), y el recibo se manda cuando se aprueba el completado, no cuando el jugador pulsa «Completado».
+- «los encargos que hiciste» del perfil son los que has creado (no los que has realizado para otros), y el recibo se manda cuando se aprueba el completado, no cuando el jugador pulsa «Completado».
 - El dinero extra solo lo da quien creó el encargo; un admin que aprueba el de otro elige precio pero no da extra.
 - Las globales y encargos que ya tiene otra persona se siguen viendo, apagados, con «La tiene X».
 
@@ -67,9 +67,16 @@ Pestañas **Monedas** (lo de antes) y **Misiones**: a la izquierda «Por revisar
 - Perfil (`perfil.html`): cartel y tienda con tus anuncios.
 
 ## Pendiente de revisar
-1. **Misiones:** que el usuario las pruebe en la web real (sobre todo el recibo del encargo por privado y en el canal) y revise lo marcado como provisional.
-2. **Correo a Rolfin:** falta su respuesta sobre si le llega.
+1. **Misiones:** que el usuario las pruebe en la web real (sobre todo el recibo del encargo por privado y en el canal). Falta desplegar la API con el cambio del límite de globales.
+2. **Correo a Rolfin:** le llega (confirmado 16/11).
 3. **Reintento del correo:** si el correo falla pero Discord no, no se reintenta. No corre prisa.
 4. **Conectar con Discord:** solo probado en local; Rolfin lo hará cuando tenga cuenta.
 5. **Sin probar en la web real:** perfil (editar y quitar desde la tienda, menú del avatar), `/clear-chat`, inicio nuevo y Administración.
 6. **Mercadillo con amigos reales:** el usuario lo probará con Rolfin.
+
+## Menú móvil y app instalable (16/11/2026, sin subir)
+- Orden del menú (web y móvil): Inicio · Misiones · Eventos · Mods · Lore · Mercadillo · Updates · Sugerencias (`PAGINAS` en `js/app.js`).
+- Por debajo de 800 px de ancho: 3 rayas a la izquierda y menú lateral (diseño A elegido, sin X; se cierra pulsando fuera o en las rayas). Abajo: avatar + «Mi perfil» + monedas, «Administración» (solo admins) y «Salir». Estilos al final de `css/estilo.css`.
+- App instalable: `manifest.webmanifest`, `sw.js` (no guarda nada en caché, solo permite instalar) e icono provisional «CL» en `img/icono-*.png`. Enlazados en el `<head>` de todas las páginas.
+- Probado en local a 375 px: menú abre y cierra, pie con y sin admin, sin desbordes. Sin probar: instalarla en un móvil real (necesita HTTPS, o sea la web publicada).
+- Vista previa del diseño en `previas-movil/` (no se sube).

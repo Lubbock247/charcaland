@@ -1,6 +1,6 @@
 const PAGINAS = [
-  ["index.html", "Inicio"], ["updates.html", "Updates"], ["mods.html", "Mods"],
-  ["eventos.html", "Eventos"], ["lore.html", "Lore"], ["mercadillo.html", "Mercadillo"], ["misiones.html", "Misiones"], ["sugerencias.html", "Sugerencias"],
+  ["index.html", "Inicio"], ["misiones.html", "Misiones"], ["eventos.html", "Eventos"], ["mods.html", "Mods"],
+  ["lore.html", "Lore"], ["mercadillo.html", "Mercadillo"], ["updates.html", "Updates"], ["sugerencias.html", "Sugerencias"],
 ];
 
 function esc(t) {
@@ -75,13 +75,26 @@ const SESION = (async () => {
   const enlaces = PAGINAS.map(([u, n]) =>
     `<a href="${u}" class="${u === actual ? "activa" : ""}">${n}</a>`).join("");
   document.getElementById("cabecera").innerHTML =
-    `<div class="barra"><a class="logo" href="index.html">${logoServidor(CONFIG.nombreServidor)}</a><nav>${enlaces}</nav><div class="usuario" id="usuario"></div></div>`;
+    `<div class="barra"><button class="ham" id="btnHam" aria-label="Menú"><i></i><i></i><i></i></button><a class="logo" href="index.html">${logoServidor(CONFIG.nombreServidor)}</a><nav>${enlaces}</nav><div class="usuario" id="usuario"></div></div>
+     <div class="sombra-cajon" id="sombraCajon"></div>
+     <aside class="cajon" id="cajon"><div class="cajon-cab"><a class="logo" href="index.html">${logoServidor(CONFIG.nombreServidor)}</a></div>
+       <div class="cajon-enlaces">${enlaces}</div><div class="cajon-pie" id="cajonPie"></div></aside>`;
+  // Menú lateral del móvil: se abre con las 3 rayas y se cierra pulsando fuera o en las rayas.
+  const cajon = document.getElementById("cajon"), sombra = document.getElementById("sombraCajon");
+  const abrir = si => { document.body.classList.toggle("cajon-abierto", si); };
+  document.getElementById("btnHam").onclick = () => abrir(!document.body.classList.contains("cajon-abierto"));
+  sombra.onclick = () => abrir(false);
   SESION.then(u => {
     const el = document.getElementById("usuario");
     el.innerHTML = u
       ? `<span class="saldo" title="Tus monedas">${u.saldo} monedas</span><div class="menu-yo"><a href="#" class="perfil" id="btnYo" title="Tu cuenta"><img class="avatar" src="${avatarDe(u)}" alt="${esc(u.nombre)}"></a>
          <div class="desplegable oculto" id="menuYo"><a href="perfil.html"><i class="ti ti-user"></i> Perfil</a>${u.rol === "admin" ? `<a href="admin.html"><i class="ti ti-shield"></i> Administración</a>` : ""}<a href="#" id="salirNav"><i class="ti ti-logout"></i> Salir</a></div></div>`
       : `<a href="#" id="entrarNav">Entrar con Discord</a>`;
+    document.getElementById("cajonPie").innerHTML = u
+      ? `<a href="perfil.html" class="cajon-yo"><img class="avatar" src="${avatarDe(u)}" alt="">Mi perfil<span class="saldo">${u.saldo} monedas</span></a>${u.rol === "admin" ? `<a href="admin.html">Administración</a>` : ""}<a href="#" id="salirCajon">Salir</a>`
+      : `<a href="#" id="entrarCajon">Entrar con Discord</a>`;
+    const sc = document.getElementById("salirCajon"); if (sc) sc.onclick = e => { e.preventDefault(); salir(); };
+    const ec = document.getElementById("entrarCajon"); if (ec) ec.onclick = e => { e.preventDefault(); irALogin(); };
     const n = document.getElementById("entrarNav"); if (n) n.onclick = e => { e.preventDefault(); irALogin(); };
     // Menú del avatar: Perfil y Salir. Se cierra al pulsar fuera.
     const by = document.getElementById("btnYo"), my = document.getElementById("menuYo");
@@ -92,6 +105,8 @@ const SESION = (async () => {
     }
     if (FUERA) avisoFuera();
   });
+  // App instalable: el service worker solo hace falta para que el móvil ofrezca «Instalar».
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   document.getElementById("pie").textContent = `${CONFIG.nombreServidor} · servidor privado de amigos`;
 })();
 

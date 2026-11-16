@@ -140,7 +140,7 @@ function leerAnuncio(d, tipo) {
     if (r.precio === null) return [null, "Falta el precio de salida"];
   } else {
     r.precio = objetos.reduce((s, o) => s + o.cantidad * o.precio, 0);
-    if (r.precio < 1 || r.precio > MAX_MONEDAS) return [null, "El precio total tiene que ser de al menos 1 moneda"];
+    if (r.precio < 0 || r.precio > MAX_MONEDAS) return [null, "El precio total no es válido"];
   }
   // Sin nombre: con un objeto, el del objeto; con varios, «Anuncio #0001» (se pone al saber el número).
   if (!r.titulo && objetos.length === 1) r.titulo = objetos[0].nombre;

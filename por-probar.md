@@ -36,7 +36,7 @@ Apunta aquí lo que veas raro:
 **Ya comprobado por Claude:** las updates salen de la base de datos en la página Updates y en la portada; crear/borrar sin sesión se rechaza; el formulario se ve bien.
 
 **Contigo (admin):**
-- [ ] En Updates ves «+ Nueva update» y en cada tarjeta «Editar» y «Borrar».
+- «Pendiente de revisar» **no** cuenta dentro de las 3 globales a la vez (decidido por el usuario el 16/11; cambiado en `api/src/misiones.js`, sin desplegar).
 - [ ] Creas una update y aparece arriba del todo; en Inicio sale como «Última update».
 - [ ] La editas y se guarda el cambio.
 - [ ] La borras (pide confirmación) y desaparece.
@@ -107,7 +107,7 @@ Apunta aquí lo que veas raro:
 - [ ] Subasta con dos personas: la otra ve la puja nueva en unos segundos sin recargar.
 - [ ] `/clear` respondiendo a un mensaje borra ese; sin responder, borra todos (hasta 1 min).
 - [ ] Rolfin entra con su enlace la primera vez y luego con su contraseña.
-- [ ] A Rolfin le llega el recibo por correo (mirar spam).
+- [x] A Rolfin le llega el recibo por correo.
 - [ ] Rolfin pulsa «Conectar con Discord» y su cuenta pasa a la de Discord (sigue siendo admin, el enlace deja de servir).
 
 ## Misiones y encargos (16/11/2026)
