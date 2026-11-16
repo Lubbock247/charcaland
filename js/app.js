@@ -80,7 +80,7 @@ const SESION = (async () => {
     `<div class="barra"><button class="ham" id="btnHam" aria-label="Menú"><i></i><i></i><i></i></button><a class="logo" href="index.html">${logoServidor(CONFIG.nombreServidor)}</a><nav>${enlaces}</nav><div class="usuario" id="usuario"></div></div>
      <div class="sombra-cajon" id="sombraCajon"></div>
      <aside class="cajon" id="cajon"><div class="cajon-cab"><a class="logo" href="index.html">${logoServidor(CONFIG.nombreServidor)}</a></div>
-       <div class="cajon-enlaces">${enlaces}<a href="#" id="transferirCajon" class="oculto">Transferir</a></div><div class="cajon-pie" id="cajonPie"></div></aside>`;
+       <div class="cajon-enlaces">${enlaces}<a href="#" id="transferirCajon" class="oculto">Transferir</a></div><a href="#" id="instalarCajon" class="cajon-instalar oculto"><i class="ti ti-download"></i> Instalar app</a><div class="cajon-pie" id="cajonPie"></div></aside>`;
   // Menú lateral del móvil: se abre con las 3 rayas y se cierra pulsando fuera o en las rayas.
   const cajon = document.getElementById("cajon"), sombra = document.getElementById("sombraCajon");
   const abrir = si => { document.body.classList.toggle("cajon-abierto", si); };
@@ -111,6 +111,18 @@ const SESION = (async () => {
   });
   // App instalable: el service worker solo hace falta para que el móvil ofrezca «Instalar».
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  // «Instalar app» en el menú de 3 rayas, salvo si ya se está usando como app instalada.
+  const instalada = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  const ins = document.getElementById("instalarCajon");
+  let aviso = null;
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); aviso = e; });
+  window.addEventListener("appinstalled", () => ins.classList.add("oculto"));
+  if (!instalada) ins.classList.remove("oculto");
+  ins.onclick = async e => {
+    e.preventDefault(); document.body.classList.remove("cajon-abierto");
+    if (aviso) { aviso.prompt(); const r = await aviso.userChoice; if (r.outcome === "accepted") ins.classList.add("oculto"); aviso = null; return; }
+    ventanaInstalar();
+  };
   document.getElementById("pie").textContent = `${CONFIG.nombreServidor} · servidor privado de amigos`;
 })();
 
@@ -556,4 +568,19 @@ async function ventanaTransferir() {
       fondo.querySelector("[data-cerrar]").onclick = ev => { ev.preventDefault(); cerrar(); };
     } catch (er) { mal(er.message); boton.disabled = false; }
   };
+}
+
+// Si el navegador no deja instalar con un botón (iPhone, Opera…), se explica cómo hacerlo.
+function ventanaInstalar() {
+  const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua), opera = /OPR|Opera/.test(ua);
+  const pasos = ios
+    ? `<p>En <b>Safari</b>, toca <b>Compartir</b> <i class="ti ti-share-2"></i> y luego <b>Añadir a pantalla de inicio</b>.</p>`
+    : opera
+      ? `<p>Ábrela en <b>Chrome</b> para que el icono salga limpio. En Chrome, toca <b>⋮</b> y luego <b>Instalar aplicación</b>.</p>`
+      : `<p>Toca <b>⋮</b> en el navegador y luego <b>Instalar aplicación</b> o <b>Añadir a pantalla de inicio</b>.</p>`;
+  const fondo = document.createElement("div");
+  fondo.className = "fondo-fuera con-scroll";
+  fondo.innerHTML = `<div class="aviso-fuera ventana-mision"><img src="img/icono-192.png" alt="" class="icono-app"><h2>Instalar Charcaland</h2>${pasos}<a class="btn" href="#" data-cerrar>Vale</a></div>`;
+  document.body.appendChild(fondo);
+  fondo.onclick = e => { if (e.target === fondo || e.target.closest("[data-cerrar]")) { e.preventDefault(); fondo.remove(); } };
 }

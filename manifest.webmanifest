@@ -1,14 +1,19 @@
 {
+  "id": "./",
   "name": "Charcaland",
   "short_name": "Charcaland",
+  "description": "Eventos, lore, mods, mercadillo y misiones del servidor Charcaland.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#14161c",
   "theme_color": "#1f232d",
   "lang": "es",
   "icons": [
-    { "src": "img/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "img/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "img/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "img/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "img/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
