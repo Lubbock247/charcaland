@@ -25,6 +25,8 @@ function irALogin() {
   if (!CONFIG.discordClientId) return;
   const p = new URLSearchParams({ client_id: CONFIG.discordClientId, response_type: "token",
     scope: "identify guilds", redirect_uri: location.origin + location.pathname.replace(/[^/]*$/, "") + "sugerencias.html" });
+  // En el móvil, Discord enseña siempre la pantalla de autorizar con tu cuenta y la opción de cambiar de cuenta.
+  if (matchMedia("(pointer: coarse)").matches) p.set("prompt", "consent");
   location.href = "https://discord.com/oauth2/authorize?" + p;
 }
 function avatarDe(u, t) {

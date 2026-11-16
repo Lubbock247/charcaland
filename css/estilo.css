@@ -681,9 +681,13 @@ button.sec:disabled { color: var(--suave); cursor: default; border-color: var(--
 /* ---- Menú lateral del móvil (3 rayas) ---- */
 .ham, .cajon, .sombra-cajon { display: none; }
 @media (max-width: 800px) {
-  .barra { flex-wrap: nowrap; gap: 12px; }
+  .barra { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 0 10px; }
+  .barra .ham { justify-self: start; }
+  .barra .logo { justify-self: center; }
+  .barra .usuario { justify-self: end; }
+  #entrarNav { display: none; }
   .barra > nav, .usuario .saldo { display: none; }
-  .ham { display: flex; flex-direction: column; gap: 5px; width: 40px; padding: 8px; background: none; border: 0; cursor: pointer; }
+  .ham { display: flex; flex-direction: column; gap: 5px; width: 40px; padding: 8px; margin: 0; background: none; border: 0; cursor: pointer; }
   .ham i { display: block; width: 100%; height: 3px; background: var(--texto); border-radius: 2px; }
   .sombra-cajon { display: block; position: fixed; inset: 0; background: #000a; z-index: 20; opacity: 0; pointer-events: none; transition: opacity .2s; }
   .cajon { display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; width: min(78vw, 320px); z-index: 21;
