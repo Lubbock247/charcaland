@@ -5,18 +5,19 @@ const MI_ICO = { personal: "ti-user-star", global: "ti-world", encargo: "ti-clip
 const MI_PESTANAS = [["inicio", "Inicio"], ["personales", "Misiones personales"], ["globales", "Misiones globales"], ["encargos", "Encargos"]];
 const miMonedas = n => Number(n).toLocaleString("es-ES") + " monedas";
 
-// Recompensa: monedas (se pagan desde la web) y objetos (se entregan en el juego).
-// En un encargo con dos precios se ve «80 – 120 monedas»: completado – satisfactorio.
+// En un encargo con dos precios se ve «80 – 120»: completado – satisfactorio.
 const miDosPrecios = m => m.tipo === "encargo" && m.monedas_min < m.monedas;
-const miPremio = m => `<div class="premio">${m.monedas ? `<span class="mon" ${miDosPrecios(m) ? `title="${m.monedas_min} si está completado, ${m.monedas} si queda satisfactorio"` : ""}><i class="ti ti-coins"></i> ${miDosPrecios(m) ? Number(m.monedas_min).toLocaleString("es-ES") + " – " : ""}${miMonedas(m.monedas)}</span>` : ""}${
-  m.objetos.map(o => `<span class="ob"><i class="ti ti-package"></i> ${esc(o)}</span>`).join("")}</div>`;
-const miPremioTexto = m => [m.monedas ? miMonedas(m.monedas) : "", ...m.objetos].filter(Boolean).join(" + ");
 
-// Una fila: icono, título con su estado, descripción, una línea pequeña, recompensa y botones.
+// Una fila: a la izquierda el talón con la recompensa (monedas en grande y objetos, que se entregan en el juego);
+// en el centro título con su estado, descripción y tipo; a la derecha los botones, uno encima de otro.
 function filaMision(m, o) {
-  return `<div class="fila-m t-${m.tipo} ${o.apagada ? "apagada" : ""}"><div class="ico"><i class="ti ${MI_ICO[m.tipo]}"></i></div>
-    <div class="txt"><h3>${esc(m.titulo)} ${o.estado || ""}</h3>${m.descripcion ? `<p>${esc(m.descripcion)}</p>` : ""}<div class="de">${o.de || ""}</div></div>
-    ${miPremio(m)}<div class="botones">${o.botones || ""}</div></div>`;
+  const n = x => Number(x).toLocaleString("es-ES");
+  return `<div class="fila-m t-${m.tipo} ${o.apagada ? "apagada" : ""}"><div class="talon">
+      ${m.monedas ? `<span class="num">${miDosPrecios(m) ? n(m.monedas_min) + " – " : ""}${n(m.monedas)}</span><span class="uni">monedas</span>` : `<i class="ti ti-package solo"></i>`}
+      ${m.objetos.map(x => `<span class="ob"><i class="ti ti-package"></i> ${esc(x)}</span>`).join("")}</div>
+    <div class="txt"><h3>${esc(m.titulo)} ${o.estado || ""}</h3>${m.descripcion ? `<p>${esc(m.descripcion)}</p>` : ""}
+      <div class="de"><span class="tipo-m">${MI_TIPOS[m.tipo]}</span>${o.de || ""}</div></div>
+    <div class="botones">${o.botones || ""}</div></div>`;
 }
 const miEstado = (clase, t) => `<span class="estado ${clase}">${t}</span>`;
 const miPapelera = (id, titulo) => `<a class="papelera" href="#" data-mi="borrar" data-id="${id}" title="${titulo}"><i class="ti ti-trash"></i></a>`;
@@ -33,26 +34,35 @@ function ventanaMi(html) {
 }
 
 // Formulario para crear una misión o un encargo. «fijo» son los datos que no elige quien escribe (tipo, jugador…).
-function formMision(titulo, ayuda, fijo, alGuardar) {
+// Orden: título, precio, descripción y objetos (cada objeto en su fila, con cantidad y nombre).
+// Sin textos de ayuda: en los formularios solo se marca lo que es «(opcional)».
+function formMision(titulo, fijo, alGuardar) {
+  const filaObjeto = () => `<div class="obj-m"><input name="o_cant" type="number" min="1" value="1" aria-label="Cantidad"><span>×</span>
+    <input name="o_nombre" maxlength="50" aria-label="Objeto"><a class="papelera" href="#" data-quitar-obj title="Quitar objeto"><i class="ti ti-trash"></i></a></div>`;
   const v = ventanaMi(`<form class="form-mision"><h2>${titulo}</h2>
-    <label>Título</label><input name="titulo" required maxlength="80" placeholder="Qué hay que hacer">
-    <label>Descripción <small>(opcional)</small></label><textarea name="descripcion" class="corto" maxlength="600" placeholder="Detalles, dónde dejarlo, cómo demostrarlo…"></textarea>
-    ${fijo.tipo === "encargo" ? `<div class="horas"><div><label>Monedas si está completado <small>(mínimo)</small></label><input name="monedas_min" type="number" min="0" placeholder="0"></div>
-      <div><label>Monedas si queda satisfactorio <small>(máximo)</small></label><input name="monedas" type="number" min="0" placeholder="igual que el mínimo"></div></div>
-      <label>Objetos <small>(opcional, uno por línea)</small></label><textarea name="objetos" class="mini" placeholder="3× Diamante"></textarea>`
-    : `<div class="horas"><div><label>Monedas <small>(0 si no hay)</small></label><input name="monedas" type="number" min="0" value="0"></div>
-      <div><label>Objetos <small>(uno por línea)</small></label><textarea name="objetos" class="mini" placeholder="3× Diamante"></textarea></div></div>`}
-    <p class="ayuda">${ayuda}</p><div class="aviso oculto"></div>
+    <label>Título</label><input name="titulo" required maxlength="80">
+    ${fijo.tipo === "encargo" ? `<div class="horas"><div><label>Precio completado</label><input name="monedas_min" type="number" min="0"></div>
+      <div><label>Precio satisfactorio</label><input name="monedas" type="number" min="0"></div></div>`
+    : `<label>Monedas <small>(opcional)</small></label><input name="monedas" type="number" min="0">`}
+    <label>Descripción <small>(opcional)</small></label><textarea name="descripcion" class="corto" maxlength="600"></textarea>
+    <label>Objetos <small>(opcional)</small></label><div id="objsM"></div>
+    <button type="button" class="mas-obj" id="masObjM"><i class="ti ti-plus"></i> Añadir objeto</button>
+    <div class="aviso oculto"></div>
     <button type="submit">Publicar</button> <a class="btn g" href="#" data-cerrar>Cancelar</a></form>`);
-  const f = v.querySelector("form");
+  const f = v.querySelector("form"), objs = v.querySelector("#objsM");
+  v.querySelector("#masObjM").onclick = () => { objs.insertAdjacentHTML("beforeend", filaObjeto()); objs.lastElementChild.querySelector("[name=o_nombre]").focus(); };
+  objs.onclick = e => { const q = e.target.closest("[data-quitar-obj]"); if (q) { e.preventDefault(); q.closest(".obj-m").remove(); } };
   f.onsubmit = async e => {
     e.preventDefault();
     const b = f.querySelector("button[type=submit]"); b.disabled = true;
     const d = Object.fromEntries(new FormData(f));
+    const objetos = [...objs.querySelectorAll(".obj-m")].map(o => [o.querySelector("[name=o_cant]").value, o.querySelector("[name=o_nombre]").value.trim()])
+      .filter(([, n]) => n).map(([c, n]) => `${Math.max(1, Number(c) || 1)}× ${n}`);
     try {
       // Encargo: si solo se rellena un precio, los dos son el mismo.
       const min = Number(d.monedas_min || 0), max = Number(d.monedas || 0) || min;
-      await api("/api/misiones", { method: "POST", body: JSON.stringify({ ...fijo, ...d, monedas: max, monedas_min: fijo.tipo === "encargo" ? (d.monedas_min === "" ? max : min) : undefined, objetos: d.objetos.split("\n") }) });
+      await api("/api/misiones", { method: "POST", body: JSON.stringify({ ...fijo, titulo: d.titulo, descripcion: d.descripcion, monedas: max,
+        monedas_min: fijo.tipo === "encargo" ? (d.monedas_min === "" ? max : min) : undefined, objetos }) });
       v.remove(); alGuardar();
     } catch (er) { const a = v.querySelector(".aviso"); a.textContent = er.message; a.classList.remove("oculto"); b.disabled = false; }
   };
@@ -66,21 +76,19 @@ async function miSaldo() {
 // Botones de las filas (los mismos en la página y en Administración). Cada uno pregunta antes si hace falta.
 // Aprobar un encargo: se elige qué precio se paga (completado o satisfactorio) y, quien lo creó, puede dar dinero extra.
 function ventanaPago(m, u, hecho) {
-  const creador = !m.de_admin && u && m.autor_id === u.id, dos = miDosPrecios(m), n = x => Number(x).toLocaleString("es-ES");
-  const devuelve = m.de_admin ? "" : ` Se devuelven ${n(m.monedas - m.monedas_min)} monedas${creador ? " a tu saldo" : " a quien lo creó"}.`;
+  const creador = !m.de_admin && u && m.autor_id === u.id, dos = miDosPrecios(m);
   const v = ventanaMi(`<form class="form-mision"><h2>Pagar el encargo</h2>
-    <p class="ayuda centro">«${esc(m.titulo)}», hecho por ${esc(m.usuario || "?")}</p>
-    ${dos ? `<label class="opcion-pago"><input type="radio" name="pago" value="minimo" required><span><b>Completado · ${miMonedas(m.monedas_min)}</b><small>Está hecho, sin más.${devuelve}</small></span></label>
-      <label class="opcion-pago"><input type="radio" name="pago" value="satisfactorio" required><span><b>Satisfactorio · ${miMonedas(m.monedas)}</b><small>Ha quedado como querías: se paga el precio completo.</small></span></label>`
+    <p class="ayuda centro">«${esc(m.titulo)}» · ${esc(m.usuario || "?")}</p>
+    ${dos ? `<label class="opcion-pago"><input type="radio" name="pago" value="minimo" required><span><b>Completado</b><em>${miMonedas(m.monedas_min)}</em></span></label>
+      <label class="opcion-pago"><input type="radio" name="pago" value="satisfactorio" required><span><b>Satisfactorio</b><em>${miMonedas(m.monedas)}</em></span></label>`
       : `<p class="precio-grande">${miMonedas(m.monedas)}</p>`}
-    ${creador ? `<label>Dinero extra <small>(opcional, sale de tu saldo ahora)</small></label><input name="extra" type="number" min="0" placeholder="0">` : ""}
-    ${m.objetos.length ? `<p class="ayuda">Los objetos (${m.objetos.map(esc).join(", ")}) se entregan en el juego.</p>` : ""}
+    ${creador ? `<label>Dinero extra <small>(opcional)</small></label><input name="extra" type="number" min="0">` : ""}
     <p class="total-anuncio" id="totalPago"></p><div class="aviso oculto"></div>
     <button type="submit">Pagar</button> <a class="btn g" href="#" data-cerrar>Cancelar</a></form>`);
   const f = v.querySelector("form");
   const total = () => {
     const pago = dos ? (f.pago.value || null) : "satisfactorio", extra = Number(f.extra ? f.extra.value || 0 : 0);
-    v.querySelector("#totalPago").textContent = pago ? `${m.usuario || "?"} recibe ${miMonedas((pago === "minimo" ? m.monedas_min : m.monedas) + extra)}` : "Elige qué precio pagas";
+    v.querySelector("#totalPago").textContent = pago ? `${m.usuario || "?"} recibe ${miMonedas((pago === "minimo" ? m.monedas_min : m.monedas) + extra)}` : "";
     return { pago, extra };
   };
   f.oninput = total; total();
@@ -114,16 +122,16 @@ function enlazarMisiones(raiz, buscar, hecho, u) {
 // Cómo ve un jugador cada misión: estado, línea pequeña y botones.
 function filaJugador(m, u) {
   const mia = u && m.usuario_id === u.id, creada = u && m.tipo === "encargo" && m.autor_id === u.id;
-  const o = { de: MI_TIPOS[m.tipo] + (m.tipo === "encargo" ? " · de " + esc(m.autor || "?") : "") };
+  const o = { de: m.tipo === "encargo" ? "de " + esc(m.autor || "?") : "" };
   if (m.estado === "libre") {
     o.botones = !u ? `<button type="button" class="sec" data-entrar>Entrar para aceptar</button>`
-      : creada ? `<button type="button" class="sec" disabled>Nadie lo ha aceptado aún</button>${miPapelera(m.id, "Borrar encargo")}`
+      : creada ? miPapelera(m.id, "Borrar encargo")
       : miBoton("aceptar", m.id, "Aceptar");
+    if (creada) o.estado = miEstado("", "Sin aceptar");
   } else if (mia) {
     const curso = m.estado === "curso";
     o.estado = curso ? miEstado("curso", "En curso") : miEstado("revisar", "Pendiente de revisar");
-    o.botones = curso ? miBoton("completar", m.id, "Completado") + miBoton("abandonar", m.id, m.tipo === "personal" ? "Rechazar" : "Abandonar", true)
-      : `<button type="button" class="sec" disabled>Esperando revisión…</button>`;
+    if (curso) o.botones = miBoton("completar", m.id, "Completado") + miBoton("abandonar", m.id, m.tipo === "personal" ? "Rechazar" : "Abandonar", true);
   } else if (creada) {
     const revisar = m.estado === "revisar";
     o.estado = revisar ? miEstado("revisar", `${esc(m.usuario || "?")} dice que está hecho`) : miEstado("curso", `Lo hace ${esc(m.usuario || "?")}`);
@@ -148,39 +156,28 @@ async function paginaMisiones() {
 
   const fila = m => filaJugador(m, u);
   const lista = (l, vacio) => l.length ? `<div class="diario">${l.map(fila).join("")}</div>` : `<div class="vacio">${vacio}</div>`;
-  const seccion = (ico, t, l, vacio, ver, hash) => `<div class="seccion-merc"><div class="seccion-cab"><h2><i class="ti ${ico}"></i> ${t}</h2>
-    ${ver ? `<a href="#${hash}">${ver} →</a>` : ""}</div>${lista(l, vacio)}</div>`;
   const entra = t => `<div class="vacio">${t}<br><br><a class="btn" href="#" data-entrar>Entrar con Discord</a></div>`;
 
   function pintar() {
     const h = location.hash.slice(1), sel = MI_PESTANAS.some(p => p[0] === h) ? h : "inicio";
-    const ms = datos.misiones, L = datos.limites, yo = datos.yo;
+    // Los encargos que has creado tú no salen aquí: solo se ven (y se verifican) en tu perfil.
+    const ms = datos.misiones.filter(m => !(u && m.tipo === "encargo" && m.autor_id === u.id));
     const de = t => ms.filter(m => m.tipo === t);
     // Orden: primero lo libre, luego lo mío, al final lo que ya tiene otra persona.
-    const peso = m => m.estado === "libre" ? 0 : u && (m.usuario_id === u.id || m.autor_id === u.id) ? 1 : 2;
+    const peso = m => m.estado === "libre" ? 0 : u && m.usuario_id === u.id ? 1 : 2;
     const orden = l => l.slice().sort((a, b) => peso(a) - peso(b) || b.id - a.id);
     let cuerpo;
     if (sel === "inicio") {
-      // Lo que tengo yo en marcha y los encargos míos que esperan a que los revise.
-      const mias = u ? ms.filter(m => m.usuario_id === u.id || (m.autor_id === u.id && m.estado === "revisar")) : [];
-      const libres = t => de(t).filter(m => m.estado === "libre");
-      cuerpo = (u ? `<div class="contadores">
-          <a class="contador" href="#personales"><i class="ti ti-user-star"></i><div><b>${yo.personales} / ${L.personales}</b><span>Misiones personales</span></div></a>
-          <a class="contador" href="#globales"><i class="ti ti-world"></i><div><b>${yo.globales} / ${L.globales}</b><span>Globales en curso · hoy has aceptado ${yo.globales_hoy} de ${L.globales_dia}</span></div></a>
-          <a class="contador" href="#encargos"><i class="ti ti-clipboard-list"></i><div><b>${de("encargo").filter(m => m.autor_id === u.id).length}</b><span>Encargos tuyos abiertos · hoy has creado ${yo.encargos_hoy} de ${L.encargos_dia}</span></div></a></div>` +
-          seccion("ti-target-arrow", "Mis misiones en curso", mias, "No tienes ninguna misión en curso. Acepta una de las de abajo.") : "") +
-        seccion("ti-world", "Misiones globales libres", libres("global").slice(0, 4), "Ahora mismo no hay misiones globales libres.", "Ver todas", "globales") +
-        seccion("ti-clipboard-list", "Últimos encargos", libres("encargo").slice(0, 4), "Ahora mismo no hay encargos libres.", "Ver todos", "encargos");
+      // Solo lo mío: mis personales y lo que tengo en curso.
+      // Sin nada de eso, Inicio sale vacío. Sin contadores ni textos de explicación.
+      cuerpo = !u ? entra("Entra con Discord para ver tus misiones.")
+        : lista(ms.filter(m => m.usuario_id === u.id), "No tienes misiones en curso.");
     } else if (sel === "personales") {
-      cuerpo = !u ? entra("Entra con Discord para ver tus misiones personales.")
-        : `<p class="ayuda nota-m">Te las pone un administrador. Tienes ${yo.personales} de ${L.personales}. Si rechazas una, desaparece.</p>` +
-          lista(de("personal"), "No tienes misiones personales. Te las pondrá un administrador.");
+      cuerpo = !u ? entra("Entra con Discord para ver tus misiones personales.") : lista(de("personal"), "No tienes misiones personales.");
     } else if (sel === "globales") {
-      cuerpo = `<p class="ayuda nota-m">Cada misión global la hace una sola persona. Puedes aceptar ${L.globales_dia} al día y tener ${L.globales} a la vez${
-        u ? ` (hoy llevas ${yo.globales_hoy}; tienes ${yo.globales} en curso)` : ""}.</p>` + lista(orden(de("global")), "No hay misiones globales ahora mismo.");
+      cuerpo = lista(orden(de("global")), "No hay misiones globales.");
     } else {
-      cuerpo = `<p class="ayuda nota-m">Trabajos que un jugador pide a otro. Cada encargo lo hace una sola persona; quien lo creó lo aprueba y entonces se paga${
-        u ? `. Puedes tener ${L.encargos} aceptados a la vez (tienes ${yo.encargos}). Hoy has creado ${yo.encargos_hoy} de ${L.encargos_dia}` : ""}.</p>` + lista(orden(de("encargo")), "No hay encargos ahora mismo. ¡Crea el primero!");
+      cuerpo = lista(orden(de("encargo")), "No hay encargos.");
     }
     caja.innerHTML = `<div class="barra-merc"><div class="wtabs">${MI_PESTANAS.map(([id, t]) => `<a href="#${id}" class="${id === sel ? "sel" : ""}">${t}</a>`).join("")}</div>
       <div class="filtros">${u ? `<a class="btn" href="#" id="nuevoEncargo"><i class="ti ti-plus"></i> Nuevo encargo</a>` : `<a class="btn" href="#" data-entrar>Entrar con Discord</a>`}</div></div>${cuerpo}`;
@@ -188,8 +185,7 @@ async function paginaMisiones() {
     caja.querySelectorAll("[data-entrar]").forEach(b => b.onclick = e => { e.preventDefault(); irALogin(); });
     const n = caja.querySelector("#nuevoEncargo");
     if (n) n.onclick = e => { e.preventDefault();
-      formMision("Nuevo encargo", "Al publicarlo se aparta de tu saldo el precio máximo. Cuando te digan que está hecho, eliges: si solo está completado pagas el mínimo y se te devuelve el resto; si te gusta, pagas el máximo, y puedes añadir dinero extra. Si lo borras antes de que alguien lo acepte, se te devuelve todo. Los objetos los entregas tú en el juego.",
-        { tipo: "encargo" }, () => { location.hash = "encargos"; hecho(); }); };
+      formMision("Nuevo encargo", { tipo: "encargo" }, () => { location.href = "perfil.html"; }); };
   }
   window.onhashchange = () => { if (datos) pintar(); };
   // Lo que hacen los demás (aceptar, completar…) se ve al recargar cada 30 s, si no hay una ventana abierta.
@@ -210,9 +206,7 @@ async function adminMisiones(caja) {
   const hecho = async () => { await cargar(); miSaldo(); };
 
   function fila(m) {
-    const o = { de: MI_TIPOS[m.tipo] };
-    if (m.tipo === "encargo") o.de += " · de " + esc(m.autor || "?") + (m.de_admin && m.creador ? ` (${esc(m.creador)})` : "");
-    else if (m.creador) o.de += " · la creó " + esc(m.creador);
+    const o = { de: m.tipo === "encargo" ? "de " + esc(m.autor || "?") + (m.de_admin && m.creador ? ` (${esc(m.creador)})` : "") : m.creador ? "la creó " + esc(m.creador) : "" };
     const quitar = miPapelera(m.id, m.tipo === "personal" ? "Quitar misión" : "Borrar");
     if (m.estado === "libre") { o.estado = miEstado("", "Libre"); o.botones = quitar; return filaMision(m, o); }
     const quien = esc(m.usuario || "?");
@@ -241,13 +235,13 @@ async function adminMisiones(caja) {
         ${lista(suyas, "No tiene misiones personales.")}
         <h2 class="sub2"><i class="ti ti-world"></i> Sus globales y encargos en curso</h2>${lista(otras, "No tiene ninguna.")}`;
     } else if (sel === "encargos") {
-      derecha = `<h2><i class="ti ti-clipboard-list"></i> Encargos <small>los de los jugadores y los de Administración</small>
+      derecha = `<h2><i class="ti ti-clipboard-list"></i> Encargos
         <a class="btn" href="#" data-nueva="encargo"><i class="ti ti-plus"></i> Encargo de Administración</a></h2>${lista(ms.filter(m => m.tipo === "encargo"), "No hay encargos abiertos.")}`;
     } else if (sel === "globales") {
-      derecha = `<h2><i class="ti ti-world"></i> Misiones globales <small>cada una la hace una sola persona</small>
+      derecha = `<h2><i class="ti ti-world"></i> Misiones globales
         <a class="btn" href="#" data-nueva="global"><i class="ti ti-plus"></i> Nueva misión global</a></h2>${lista(ms.filter(m => m.tipo === "global"), "No hay misiones globales. Crea la primera.")}`;
     } else {
-      derecha = `<h2><i class="ti ti-checkbox"></i> Por revisar <small>los jugadores han pulsado «Completado»</small></h2>
+      derecha = `<h2><i class="ti ti-checkbox"></i> Por revisar</h2>
         ${lista(ms.filter(m => m.estado === "revisar"), "No hay nada pendiente de revisar.")}`;
     }
     caja.innerHTML = `<div class="adm"><div class="adm-lista">
@@ -263,9 +257,9 @@ async function adminMisiones(caja) {
     if (n) n.onclick = e => {
       e.preventDefault();
       const t = n.dataset.nueva;
-      if (t === "personal") formMision(`Misión para ${esc(jugador.nombre)}`, "Solo la verá esta persona. Cuando la apruebes se le pagan las monedas; los objetos se los das en el juego.", { tipo: "personal", usuario_id: jugador.id }, hecho);
-      else if (t === "global") formMision("Nueva misión global", "La verá todo el mundo y la aceptará una sola persona. Al aprobarla se pagan las monedas.", { tipo: "global" }, hecho);
-      else formMision("Encargo de Administración", "Saldrá como «Administración» y no descuenta monedas a nadie: se crean al aprobarlo, con el precio (completado o satisfactorio) que elijas entonces.", { tipo: "encargo", de_admin: true }, hecho);
+      if (t === "personal") formMision(`Misión para ${esc(jugador.nombre)}`, { tipo: "personal", usuario_id: jugador.id }, hecho);
+      else if (t === "global") formMision("Nueva misión global", { tipo: "global" }, hecho);
+      else formMision("Encargo de Administración", { tipo: "encargo", de_admin: true }, hecho);
     };
   }
   cargar();
@@ -281,10 +275,10 @@ async function perfilEncargos(u) {
     catch { caja.innerHTML = `<div class="vacio">No se pudieron cargar tus encargos.</div>`; return; }
     const revisar = ms.filter(m => m.estado === "revisar"), resto = ms.filter(m => m.estado !== "revisar");
     const filas = l => `<div class="diario">${l.map(m => filaJugador(m, u)).join("")}</div>`;
-    caja.innerHTML = `<div class="tarjeta mis-encargos"><h2><i class="ti ti-clipboard-list"></i> Mis encargos <a href="misiones.html#encargos">Ir a Encargos →</a></h2>
+    caja.innerHTML = `<div class="tarjeta mis-encargos"><h2><i class="ti ti-clipboard-list"></i> Mis encargos <a class="btn g mini" href="misiones.html#encargos">Ir a Encargos <i class="ti ti-arrow-right"></i></a></h2>
       ${revisar.length ? `<h3 class="por-verificar"><i class="ti ti-alert-circle"></i> Por verificar (${revisar.length})</h3>${filas(revisar)}` : ""}
       ${resto.length ? `<h3>Abiertos (${resto.length})</h3>${filas(resto)}` : ""}
-      ${ms.length ? "" : `<p class="ayuda">No tienes encargos abiertos. Puedes crear uno en <a href="misiones.html#encargos">Misiones</a>.</p>`}</div>`;
+      ${ms.length ? "" : `<div class="vacio">No tienes encargos abiertos.</div>`}</div>`;
     enlazarMisiones(caja, id => ms.find(m => m.id === id), async () => { await cargar(); miSaldo(); const b = document.querySelector(".cartel-perfil .der b"); try { const yo = await api("/api/yo"); if (b) b.textContent = Number(yo.saldo).toLocaleString("es-ES"); } catch {} }, u);
   }
   setInterval(() => { if (!document.querySelector(".fondo-fuera") && !document.hidden) cargar(); }, 30000);

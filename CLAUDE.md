@@ -25,6 +25,7 @@ Es privada, para el usuario y sus amigos. Repositorio git propio (rama `main`).
 - **Administradores:** la lista de identificadores de Discord está en `api/wrangler.jsonc`. No la copies a otros sitios.
 - **Probar en local:** `127.0.0.1:8765` está permitido por CORS. Sirve la carpeta ahí para probar el front.
 - **Commits:** no hagas commit ni push sin que el usuario lo pida.
+- **Sin textos de ayuda en la interfaz:** al usuario no le gustan los textos descriptivos o explicativos (frases bajo los títulos de cada apartado, explicaciones al pie de un formulario, aclaraciones entre paréntesis en las etiquetas, textos de ejemplo dentro de los campos, contadores de límites). En los formularios, junto a la etiqueta solo puede ir «(opcional)» u «(obligatorio)». Los límites se aplican y se avisan con el error cuando se superan, no se anuncian antes.
 
 ## Por revisar
 

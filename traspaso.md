@@ -22,6 +22,14 @@ Decidido por el usuario:
 - **Día:** empieza a las 00:00, hora de España (`inicioDia`).
 - **Recibo del encargo:** PNG en morado (`datosReciboEncargo`, `enviarReciboEncargo`; el Cron reintenta si no sale ninguno). Se manda al aprobar el encargo, que es cuando se sabe el precio: por privado a quien lo creó y a quien lo hizo, al canal `RECIBOS_CANAL` y por correo a quien tenga correo. Pone «Encargo · Completado» o «Satisfactorio» y el dinero extra en su línea.
 
+Cambios pedidos por el usuario el 16/11 tras verlo en la web (subidos después, solo parte visual: `js/misiones.js`, `js/app.js`, `css/estilo.css` y números de versión):
+- Inicio de Misiones solo enseña lo tuyo (tus personales y lo que tienes en curso); sin nada de eso, sale vacío. Sin contadores de límites.
+- Fuera los textos descriptivos de cada pestaña y de los formularios (regla general en `CLAUDE.md`: solo «(opcional)» u «(obligatorio)»).
+- Formulario: título, precio, descripción y objetos; cada objeto en su fila (cantidad × nombre) con «Añadir objeto».
+- «Mis encargos» del perfil va debajo de la tienda; «Ir a Encargos» es un botón pequeño.
+- Filas con el diseño 3 elegido por el usuario (`filaMision`): talón a la izquierda con la recompensa en grande y los objetos, texto en el centro y botones apilados a la derecha.
+- Los encargos que has creado tú no salen en la página de Misiones (ni en Inicio ni en Encargos): solo en tu perfil, donde también se verifican. Al crear uno, la web te lleva al perfil.
+
 Puesto por Claude como **provisional** (el usuario no lo ha decidido):
 - Quien crea un encargo solo lo puede borrar mientras nadie lo haya aceptado; después, solo un admin.
 - «Pendiente de revisar» cuenta dentro de las 3 globales a la vez.
@@ -29,7 +37,6 @@ Puesto por Claude como **provisional** (el usuario no lo ha decidido):
 - Interpretado por Claude, sin confirmar: «los encargos que hiciste» del perfil son los que has creado (no los que has realizado para otros), y el recibo se manda cuando se aprueba el completado, no cuando el jugador pulsa «Completado».
 - El dinero extra solo lo da quien creó el encargo; un admin que aprueba el de otro elige precio pero no da extra.
 - Las globales y encargos que ya tiene otra persona se siguen viendo, apagados, con «La tiene X».
-- Inicio de Misiones: contadores, «Mis misiones en curso», «Misiones globales libres» y «Últimos encargos» (4 de cada).
 
 ### Administración (`admin.html`, `admin()` en `js/app.js`, `adminMisiones` en `js/misiones.js`)
 Pestañas **Monedas** (lo de antes) y **Misiones**: a la izquierda «Por revisar», «Misiones globales», «Encargos» y cada jugador con su contador (2/6); a la derecha lo elegido, con crear, aprobar y pagar, «No está hecha», liberar y borrar.
