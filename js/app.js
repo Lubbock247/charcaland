@@ -80,7 +80,7 @@ const SESION = (async () => {
     `<div class="barra"><button class="ham" id="btnHam" aria-label="Menú"><i></i><i></i><i></i></button><a class="logo" href="index.html">${logoServidor(CONFIG.nombreServidor)}</a><nav>${enlaces}</nav><div class="usuario" id="usuario"></div></div>
      <div class="sombra-cajon" id="sombraCajon"></div>
      <aside class="cajon" id="cajon"><div class="cajon-cab"><a class="logo" href="index.html">${logoServidor(CONFIG.nombreServidor)}</a></div>
-       <div class="cajon-enlaces">${enlaces}</div><div class="cajon-pie" id="cajonPie"></div></aside>`;
+       <div class="cajon-enlaces">${enlaces}<a href="#" id="transferirCajon" class="oculto">Transferir</a></div><div class="cajon-pie" id="cajonPie"></div></aside>`;
   // Menú lateral del móvil: se abre con las 3 rayas y se cierra pulsando fuera o en las rayas.
   const cajon = document.getElementById("cajon"), sombra = document.getElementById("sombraCajon");
   const abrir = si => { document.body.classList.toggle("cajon-abierto", si); };
@@ -95,6 +95,8 @@ const SESION = (async () => {
     document.getElementById("cajonPie").innerHTML = u
       ? `<a href="perfil.html" class="cajon-yo"><img class="avatar" src="${avatarDe(u)}" alt="">Mi perfil<span class="saldo">${u.saldo} monedas</span></a>${u.rol === "admin" ? `<a href="admin.html">Administración</a>` : ""}<a href="#" id="salirCajon">Salir</a>`
       : `<a href="#" id="entrarCajon">Entrar con Discord</a>`;
+    const tc = document.getElementById("transferirCajon");
+    if (u) { tc.classList.remove("oculto"); tc.onclick = e => { e.preventDefault(); document.body.classList.remove("cajon-abierto"); ventanaTransferir(); }; }
     const sc = document.getElementById("salirCajon"); if (sc) sc.onclick = e => { e.preventDefault(); salir(); };
     const ec = document.getElementById("entrarCajon"); if (ec) ec.onclick = e => { e.preventDefault(); irALogin(); };
     const n = document.getElementById("entrarNav"); if (n) n.onclick = e => { e.preventDefault(); irALogin(); };
@@ -415,13 +417,14 @@ const render = {
     caja.innerHTML = `<div class="cartel-perfil"><img src="${avatarDe(u, 128)}" alt="">
       <div><h2>${esc(u.nombre)}<span class="etiqueta ${u.rol === "admin" ? "" : "gris"}">${u.rol === "admin" ? "Administrador" : "Jugador"}</span></h2>
       <p id="resumenTienda">&nbsp;</p></div>
-      <div class="der"><b>${Number(u.saldo).toLocaleString("es-ES")}</b> monedas</div></div>
+      <div class="der"><b>${Number(u.saldo).toLocaleString("es-ES")}</b> monedas<br><a class="btn mini" href="#" id="btnTransferir">Transferir</a></div></div>
       <div class="toldo"></div><div class="tienda" id="tienda"><div class="vacio">Cargando…</div></div>
       <div id="misEncargos"></div>
       ${u.sin_discord ? `<div class="tarjeta conectar-dc"><h3><i class="ti ti-brand-discord"></i> Conectar con Discord</h3>
         <p>Entra con la cuenta de Discord que vayas a usar. Todo lo tuyo (monedas, anuncios, recibos) pasará a esa cuenta,
         que será tu cuenta de administrador. Después, este acceso con correo y contraseña dejará de funcionar.</p>
         <a class="btn" href="#" id="btnConectar">Conectar con Discord</a></div>` : ""}`;
+    document.getElementById("btnTransferir").onclick = e => { e.preventDefault(); ventanaTransferir(); };
     if (typeof paginaTienda === "function") paginaTienda(u);
     if (typeof perfilEncargos === "function") perfilEncargos(u);
     const bc = document.getElementById("btnConectar");
@@ -520,3 +523,37 @@ if (render[cual]) render[cual]();
   document.addEventListener("input", limpiar, true);
   document.addEventListener("change", limpiar, true);
 })();
+
+// Transferir monedas a otro jugador con un motivo. Se abre desde el perfil y desde el menú de 3 rayas.
+async function ventanaTransferir() {
+  const fondo = document.createElement("div");
+  fondo.className = "fondo-fuera con-scroll";
+  fondo.innerHTML = `<div class="aviso-fuera ventana-mision"><form class="form-mision"><h2>Transferir monedas</h2>
+    <label>Para</label><select name="a" required><option value="">Cargando…</option></select>
+    <label>Monedas</label><input name="monedas" type="number" min="1" step="1" required>
+    <label>Motivo</label><input name="motivo" maxlength="120" required>
+    <div class="aviso oculto"></div>
+    <button type="submit">Enviar</button> <a class="btn g" href="#" data-cerrar>Cancelar</a></form></div>`;
+  document.body.appendChild(fondo);
+  const cerrar = () => fondo.remove();
+  fondo.onclick = e => { if (e.target === fondo) cerrar(); };
+  fondo.querySelector("[data-cerrar]").onclick = e => { e.preventDefault(); cerrar(); };
+  const f = fondo.querySelector("form"), aviso = fondo.querySelector(".aviso"), boton = f.querySelector("button");
+  const mal = t => { aviso.textContent = t; aviso.classList.remove("oculto"); };
+  try {
+    const gente = await api("/api/jugadores");
+    f.a.innerHTML = `<option value="">Elige un jugador</option>` + gente.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join("");
+  } catch (er) { mal(er.message); }
+  f.oninput = () => { const n = Number(f.monedas.value); boton.textContent = n > 0 ? `Enviar ${n.toLocaleString("es-ES")} monedas` : "Enviar"; };
+  f.onsubmit = async e => {
+    e.preventDefault(); boton.disabled = true; aviso.classList.add("oculto");
+    try {
+      const r = await api("/api/transferir", { method: "POST", body: JSON.stringify({ a: f.a.value, monedas: Number(f.monedas.value), motivo: f.motivo.value }) });
+      const quien = f.a.options[f.a.selectedIndex].textContent;
+      document.querySelectorAll("#usuario .saldo, .cajon-yo .saldo").forEach(s => s.textContent = r.saldo + " monedas");
+      const b = document.querySelector(".cartel-perfil .der b"); if (b) b.textContent = Number(r.saldo).toLocaleString("es-ES");
+      fondo.querySelector(".aviso-fuera").innerHTML = `<h2>Enviado</h2><p>Has mandado ${Number(f.monedas.value).toLocaleString("es-ES")} monedas a ${esc(quien)}. Os llegará el recibo a los dos.</p><a class="btn" href="#" data-cerrar>Vale</a>`;
+      fondo.querySelector("[data-cerrar]").onclick = ev => { ev.preventDefault(); cerrar(); };
+    } catch (er) { mal(er.message); boton.disabled = false; }
+  };
+}

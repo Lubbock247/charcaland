@@ -80,3 +80,10 @@ Pestañas **Monedas** (lo de antes) y **Misiones**: a la izquierda «Por revisar
 - App instalable: `manifest.webmanifest`, `sw.js` (no guarda nada en caché, solo permite instalar) e icono provisional «CL» en `img/icono-*.png`. Enlazados en el `<head>` de todas las páginas.
 - Probado en local a 375 px: menú abre y cierra, pie con y sin admin, sin desbordes. Sin probar: instalarla en un móvil real (necesita HTTPS, o sea la web publicada).
 - Vista previa del diseño en `previas-movil/` (no se sube).
+
+## Transferencias y Lore (16/11/2026, sin subir)
+- **Transferencias:** botón «Transferir» en el perfil (debajo de las monedas) y como última opción de la lista del menú de 3 rayas. Ventana con Para, Monedas y Motivo. API `POST /api/transferir` y `GET /api/jugadores` (`api/src/transferencias.js`, tabla `api/transferencias.sql`). Recibo verde por privado a los dos, al canal y por correo; el Cron reintenta. Provisional: mínimo 1 moneda, motivo obligatorio (máx. 120), no a uno mismo, no se puede deshacer.
+- **Lore, pestañas:** ahora en la tabla `lore_categorias` (`api/lore.sql`): Mundo, Personajes y Relaciones; «Habilidades» quitada (no tenía páginas). Los admins ven «+ Pestaña» y «Editar pestaña» (nombre, quién crea las páginas, borrar si está vacía).
+- **Lore, apartados ocultos:** botón «Apartado oculto» en el editor (solo admins), bloque `:::oculto … :::`. La API los quita a quien no es admin; si un jugador edita su página, los ocultos se conservan al final.
+- Probado en local: transferir (saldo, errores de saldo, cantidad y motivo), ocultos (admin sí, jugador y anónimo no, se conservan al editar), crear, renombrar y borrar pestañas, y que un jugador no puede. Sin probar: recibo de transferencia por Discord (en local no hay bot).
+- Para publicar: `npx wrangler d1 execute charcaland --remote --file=transferencias.sql` y `--file=lore.sql` desde `api/`, luego `npx wrangler deploy`, y push.

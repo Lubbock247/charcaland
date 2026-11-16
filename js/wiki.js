@@ -4,13 +4,8 @@
 // Lore: una sola wiki cuyas pestañas son los apartados fijos (Mundo, Personajes...).
 // El servidor vuelve a comprobar siempre los permisos de edición.
 
-const CATEGORIAS_LORE = [
-  ["mundo", "Mundo", "Solo administradores"],
-  ["habilidades", "Habilidades", "Solo administradores"],
-  ["personajes", "Personajes", "Cada jugador crea el suyo"],
-  ["relaciones", "Relaciones", "Cada jugador crea las suyas"],
-];
-const PROPIAS = ["personajes", "relaciones"];
+// Pestañas del Lore: las carga la API (tabla lore_categorias) y las gestionan los admins. [id, nombre, propias]
+let CATEGORIAS_LORE = [];
 const ICONOS = ["sparkles", "sword", "wand", "shield", "flame", "skull", "crown", "book", "map",
   "diamond", "bolt", "ghost", "snowflake", "trees", "pick", "flask", "planet"];
 
@@ -34,7 +29,7 @@ function formato(texto, resolver) {
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, "<code>$1</code>");
   const salida = [], indice = [], usados = {};
-  let lista = null, parrafo = [], tabla = null, bloque = null;
+  let lista = null, parrafo = [], tabla = null, bloque = null, oculto = 0;
   const cierraParrafo = () => { if (parrafo.length) { salida.push("<p>" + inline(parrafo.join(" ")) + "</p>"); parrafo = []; } };
   const cierraLista = () => { if (lista) { salida.push(`</${lista}>`); lista = null; } };
   const cierraTabla = () => {
@@ -70,6 +65,8 @@ function formato(texto, resolver) {
       else if (bloque.tipo === "habilidades" && l.trim()) bloque.filas.push(l.split("|").map(s => s.trim()));
       continue;
     }
+    if (/^:::oculto\s*$/.test(l.trim())) { cierraTodo(); oculto++; salida.push(`<div class="oculto-admin"><div class="oculto-rot"><i class="ti ti-eye-off"></i> Oculto para los jugadores</div>`); continue; }
+    if (oculto && l.trim() === ":::") { cierraTodo(); oculto--; salida.push(`</div>`); continue; }
     if ((m = l.match(/^:::caja\s*(.*)$/))) { cierraTodo(); bloque = { tipo: "caja", titulo: m[1] || "Datos", filas: [] }; }
     else if (/^:::habilidades\s*$/.test(l)) { cierraTodo(); bloque = { tipo: "habilidades", filas: [] }; }
     else if ((m = l.match(/^(#{1,3}) (.+)/))) {
@@ -93,6 +90,7 @@ function formato(texto, resolver) {
   }
   if (bloque) cierraBloque();
   cierraTodo();
+  while (oculto-- > 0) salida.push(`</div>`);
   return { html: salida.join("\n"), indice };
 }
 
@@ -100,6 +98,7 @@ function formato(texto, resolver) {
 // ---------- Botones del editor ----------
 const PLANTILLAS = {
   caja: ":::caja Nombre\nImagen: https://enlace-a-una-imagen.png\nTipo: valor\nNiveles: valor\n:::",
+  oculto: ":::oculto\nTexto que solo ven los administradores\n:::",
   habilidades: ":::habilidades\nNivel 1 | Nombre de la habilidad | Qué hace\nNivel 2 | Otra habilidad | Qué hace\n:::",
   tabla: "| Columna 1 | Columna 2 |\n|---|---|\n| Dato | Dato |\n| Dato | Dato |",
 };
@@ -126,7 +125,7 @@ function iniciarWiki(seccion) {
   const puede = (cat, pagina) => {
     if (!usuario) return false;
     if (usuario.rol === "admin") return true;
-    return esLore && PROPIAS.includes(cat) && (!pagina || pagina.autor_id === usuario.id);
+    return esLore && CATEGORIAS_LORE.some(c => c[0] === cat && c[2]) && (!pagina || pagina.autor_id === usuario.id);
   };
   const porId = id => paginas.find(p => p.id === id);
   const porSlug = s => paginas.find(p => p.slug === s);
@@ -161,13 +160,13 @@ function iniciarWiki(seccion) {
   }
   function cabeceraLore(cat) {
     return cabecera("Lore de " + CONFIG.nombreServidor, "book",
-      CATEGORIAS_LORE.map(([id, nombre]) => [`#cat-${id}`, nombre, cat === id]));
+      CATEGORIAS_LORE.map(([id, nombre]) => [`#cat-${id}`, nombre, cat === id]), admin() ? `<a href="#nueva-pestana" class="mas">+ Pestaña</a>` : "");
   }
   function menuLore(cat, actual) {
-    const [, , quien] = CATEGORIAS_LORE.find(c => c[0] === cat);
-    let h = `<small class="quien">${quien}</small>` +
+    const c = CATEGORIAS_LORE.find(x => x[0] === cat) || [cat, cat, 0];
+    let h = (admin() ? `<a href="#pestana-${cat}" class="mas"><i class="ti ti-settings"></i> Editar pestaña</a>` : "") +
       paginas.filter(p => p.categoria === cat).map(p => `<a href="#${p.slug}" class="${actual === p.slug ? "sel" : ""}">${esc(p.titulo)}</a>`).join("");
-    if (puede(cat, null)) h += `<a href="#nueva-${cat}" class="mas">+ ${PROPIAS.includes(cat) && !admin() ? (cat === "personajes" ? "Crear mi personaje" : "Crear una relación") : "Página aquí"}</a>`;
+    if (puede(cat, null)) h += `<a href="#nueva-${cat}" class="mas">+ ${c[2] && !admin() ? "Crear la mía" : "Página aquí"}</a>`;
     return h;
   }
 
@@ -294,6 +293,7 @@ function iniciarWiki(seccion) {
         <button type="button" data-acc="externo">${icono("external-link")} Enlace web</button>
         <button type="button" data-acc="imagen">${icono("photo")} Imagen</button>
         <button type="button" data-acc="caja">${icono("id")} Caja de datos</button>
+        ${esLore && admin() ? `<button type="button" data-acc="oculto">${icono("eye-off")} Apartado oculto</button>` : ""}
         <button type="button" data-acc="habilidades">${icono("layout-grid")} Habilidades</button>
         <button type="button" data-acc="tabla">${icono("table")} Tabla</button>
       </div>
@@ -387,6 +387,35 @@ function iniciarWiki(seccion) {
     };
   }
 
+  function editorPestana(cat) {
+    const c = cat ? CATEGORIAS_LORE.find(x => x[0] === cat) : null;
+    if (cat && !c) return location.replace("#");
+    const vacia = !cat || !paginas.some(p => p.categoria === cat);
+    pintar(cabeceraLore(cat), null, `<form id="fp" class="editor"><h2 class="wtitulo">${c ? "Editar pestaña" : "Nueva pestaña"}</h2>
+      <label for="nombreP">Nombre</label><input id="nombreP" maxlength="30" required value="${c ? esc(c[1]) : ""}">
+      <label>Quién crea las páginas</label>
+      <label class="radio"><input type="radio" name="propias" value="0" ${!c || !c[2] ? "checked" : ""}> Solo administradores</label>
+      <label class="radio"><input type="radio" name="propias" value="1" ${c && c[2] ? "checked" : ""}> Cada jugador las suyas</label>
+      <button type="submit" class="btn-guardar">Guardar</button> <a class="btn g" href="${c ? "#cat-" + cat : "#"}">Cancelar</a>
+      ${c ? `<a class="btn g peligro" href="#" id="borrarP" title="${vacia ? "" : "Tiene páginas"}">${icono("trash")} Borrar pestaña</a>` : ""}
+      <div id="errorP" class="aviso oculto"></div></form>`);
+    const mal = t => { const e = document.getElementById("errorP"); e.textContent = t; e.classList.remove("oculto"); };
+    document.getElementById("fp").onsubmit = async ev => {
+      ev.preventDefault();
+      const cuerpo = { nombre: document.getElementById("nombreP").value, propias: document.querySelector("input[name=propias]:checked").value === "1" };
+      if (c) cuerpo.id = cat;
+      try { const r = await api("/api/lore/categorias", { method: "POST", body: JSON.stringify(cuerpo) }); await cargar(); location.hash = "cat-" + r.id; }
+      catch (er) { mal(er.message); }
+    };
+    const b = document.getElementById("borrarP");
+    if (b) b.onclick = async e => {
+      e.preventDefault();
+      if (!confirm(`¿Borrar la pestaña "${c[1]}"?`)) return;
+      try { await api("/api/lore/categorias/" + cat, { method: "DELETE" }); await cargar(); location.hash = ""; await ruta(); }
+      catch (er) { mal(er.message); }
+    };
+  }
+
   // ---------- Direcciones (#...) ----------
   async function ruta() {
     const h = decodeURIComponent(location.hash.slice(1));
@@ -403,9 +432,12 @@ function iniciarWiki(seccion) {
       return location.replace("#" + m[1]);
     }
     if (esLore) {
-      if ((m = h.match(/^nueva-(\w+)$/)) && puede(m[1], null)) return editor({ tipo: "lore", categoria: m[1] });
-      if ((m = h.match(/^cat-(\w+)$/))) return categoriaLore(m[1]);
+      if (h === "nueva-pestana" && admin()) return editorPestana(null);
+      if ((m = h.match(/^pestana-([a-z0-9-]+)$/)) && admin()) return editorPestana(m[1]);
+      if ((m = h.match(/^nueva-([a-z0-9-]+)$/)) && puede(m[1], null)) return editor({ tipo: "lore", categoria: m[1] });
+      if ((m = h.match(/^cat-([a-z0-9-]+)$/))) return categoriaLore(m[1]);
       if (h) return verLore(h);
+      if (!CATEGORIAS_LORE.length) return pintar(cabeceraLore(null), null, `<div class="vacio">Aún no hay pestañas.</div>`);
       return categoriaLore(CATEGORIAS_LORE[0][0]);
     }
     if (h === "nueva" && admin()) return editor({ tipo: "wiki" });
@@ -416,7 +448,10 @@ function iniciarWiki(seccion) {
   }
 
   async function cargar() {
-    try { paginas = await api("/api/wiki/" + seccion); }
+    try {
+      paginas = await api("/api/wiki/" + seccion);
+      if (esLore) CATEGORIAS_LORE = (await api("/api/lore/categorias")).map(c => [c.id, c.nombre, !!c.propias]);
+    }
     catch { raiz.innerHTML = `<div class="vacio">No se pudo cargar. Inténtalo más tarde.</div>`; return false; }
     return true;
   }

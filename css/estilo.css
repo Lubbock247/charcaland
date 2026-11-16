@@ -716,3 +716,12 @@ button.sec:disabled { color: var(--suave); cursor: default; border-color: var(--
 .campo-mal { border-color: #e5534b !important; box-shadow: 0 0 0 2px rgba(229,83,75,.18); }
 .aviso-campo { display: flex; align-items: center; gap: 6px; margin: 4px 0 8px; color: #ff8a83; font-size: .85rem; font-weight: 600; }
 .aviso-campo::before { content: "!"; display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #e5534b; color: #fff; font-size: .7rem; font-weight: 800; flex-shrink: 0; }
+
+/* ---- Transferir ---- */
+.cartel-perfil .der .btn.mini { margin-top: 6px; }
+
+/* ---- Lore: apartados ocultos (solo los ven los admins) ---- */
+.oculto-admin { border: 1px dashed var(--acento2); border-radius: 10px; padding: 4px 14px 10px; margin: 14px 0; background: rgba(138,92,245,.06); }
+.oculto-rot { color: var(--acento2); font-size: .8rem; font-weight: 700; letter-spacing: .5px; margin: 6px 0; }
+.editor .radio { display: flex; align-items: center; gap: 8px; font-weight: 400; margin: 4px 0; }
+.editor .radio input { width: auto; margin: 0; }

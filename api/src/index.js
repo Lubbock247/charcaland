@@ -4,6 +4,7 @@ import * as merc from "./mercadillo.js";
 import { revisarClear } from "./comandos.js";
 import * as cuentas from "./cuentas.js";
 import * as mis from "./misiones.js";
+import * as tra from "./transferencias.js";
 // Cada petición lleva el token de Discord del usuario; aquí se comprueba
 // con Discord que es válido y que se creó para ESTA aplicación.
 
@@ -75,8 +76,25 @@ async function miembroDe(req, env, cab) {
 
 // ---- Wikis (Mods y Lore) ----
 const SECCIONES = ["mods", "lore"];
-const CATEGORIAS_LORE = ["mundo", "habilidades", "personajes", "relaciones"];
-const CATEGORIAS_PROPIAS = ["personajes", "relaciones"]; // las crea y edita cada jugador
+// Las pestañas del Lore están en la tabla lore_categorias (lore.sql); las gestionan los admins.
+const categoriasLore = async env => (await env.DB.prepare("SELECT id, nombre, propias, orden FROM lore_categorias ORDER BY orden, nombre").all()).results;
+
+// Apartados ocultos: bloques «:::oculto … :::» que solo ven los admins. Se quitan antes de mandar la página a los demás.
+// Dentro puede haber otros bloques (:::caja, :::habilidades), que también se cierran con «:::».
+function partirOcultos(texto) {
+  const visible = [], ocultos = [];
+  let dentro = null, prof = 0;
+  for (const l of texto.split("\n")) {
+    if (dentro) {
+      dentro.push(l);
+      if (/^:::\S/.test(l.trim())) prof++;
+      else if (l.trim() === ":::") { if (prof) prof--; else { ocultos.push(dentro.join("\n")); dentro = null; } }
+    } else if (/^:::oculto\s*$/.test(l.trim())) { dentro = [l]; prof = 0; }
+    else visible.push(l);
+  }
+  if (dentro) ocultos.push(dentro.join("\n") + "\n:::");
+  return { visible: visible.join("\n"), ocultos };
+}
 
 // Si una página cambia de título, los enlaces [[Título viejo]] de las demás pasan al nuevo
 const normal = t => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
@@ -96,10 +114,10 @@ function slugDe(t) {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "pagina";
 }
 // Quién puede crear/editar/borrar una página
-function puede(u, seccion, categoria, pagina) {
+function puede(u, seccion, categoria, pagina, cats) {
   if (!u) return false;
   if (u.rol === "admin") return true;
-  if (seccion === "lore" && CATEGORIAS_PROPIAS.includes(categoria)) return !pagina || pagina.autor_id === u.id;
+  if (seccion === "lore" && (cats || []).some(c => c.id === categoria && c.propias)) return !pagina || pagina.autor_id === u.id;
   return false;
 }
 
@@ -118,7 +136,7 @@ async function wikiLeer(env, seccion, slug) {
 }
 async function wikiGuardar(env, u, d) {
   const titulo = String(d.titulo || "").trim().slice(0, 80);
-  const contenido = String(d.contenido || "").replace(/\r\n?/g, "\n").slice(0, 20000);
+  let contenido = String(d.contenido || "").replace(/\r\n?/g, "\n").slice(0, 20000);
   if (!titulo) return [400, { error: "Falta el título" }];
   let existente = null;
   if (d.id) {
@@ -128,10 +146,17 @@ async function wikiGuardar(env, u, d) {
   const seccion = existente ? existente.seccion : d.seccion;
   let categoria = existente ? existente.categoria : String(d.categoria || "");
   if (!SECCIONES.includes(seccion)) return [400, { error: "Sección no válida" }];
-  if (seccion === "lore" && !CATEGORIAS_LORE.includes(categoria)) return [400, { error: "Categoría no válida" }];
+  const cats = seccion === "lore" ? await categoriasLore(env) : [];
+  if (seccion === "lore" && !cats.some(c => c.id === categoria)) return [400, { error: "Pestaña no válida" }];
   if (seccion === "mods") categoria = "";
-  if (!puede(u, seccion, categoria, existente)) return [403, { error: "No tienes permiso" }];
+  if (!puede(u, seccion, categoria, existente, cats)) return [403, { error: "No tienes permiso" }];
   const esAdmin = u.rol === "admin";
+  // Quien no es admin no ve los apartados ocultos: no puede añadirlos y, al guardar, se conservan los que ya había.
+  if (!esAdmin) {
+    contenido = partirOcultos(contenido).visible;
+    const viejos = existente ? partirOcultos(existente.contenido).ocultos : [];
+    if (viejos.length) contenido = contenido.replace(/\s+$/, "") + "\n\n" + viejos.join("\n\n");
+  }
   let padre = existente ? existente.padre_id : null;
   if (esAdmin && "padre_id" in d) padre = d.padre_id ? Number(d.padre_id) : null;
   if (existente && padre === existente.id) padre = null;
@@ -164,10 +189,34 @@ async function wikiGuardar(env, u, d) {
 async function wikiBorrar(env, u, id) {
   const p = await env.DB.prepare("SELECT * FROM paginas WHERE id = ?1").bind(Number(id)).first();
   if (!p) return [404, { error: "No existe esa página" }];
-  if (!puede(u, p.seccion, p.categoria, p)) return [403, { error: "No tienes permiso" }];
+  if (!puede(u, p.seccion, p.categoria, p, p.seccion === "lore" ? await categoriasLore(env) : [])) return [403, { error: "No tienes permiso" }];
   if (await env.DB.prepare("SELECT 1 FROM paginas WHERE padre_id = ?1").bind(p.id).first())
     return [400, { error: "Tiene páginas dentro. Bórralas o muévelas antes." }];
   await env.DB.prepare("DELETE FROM paginas WHERE id = ?1").bind(p.id).run();
+  return [200, { ok: true }];
+}
+
+async function loreCategoriaGuardar(env, u, d) {
+  if (u.rol !== "admin") return [403, { error: "Solo los administradores pueden hacer esto" }];
+  const nombre = String(d.nombre || "").trim().slice(0, 30);
+  if (!nombre) return [400, { error: "Falta el nombre" }];
+  const propias = d.propias ? 1 : 0;
+  if (d.id) {
+    const r = await env.DB.prepare("UPDATE lore_categorias SET nombre = ?1, propias = ?2 WHERE id = ?3").bind(nombre, propias, String(d.id)).run();
+    if (!r.meta.changes) return [404, { error: "No existe esa pestaña" }];
+    return [200, { id: String(d.id) }];
+  }
+  let id = slugDe(nombre).slice(0, 30), n = 1;
+  while (await env.DB.prepare("SELECT 1 FROM lore_categorias WHERE id = ?1").bind(id).first()) { n++; id = slugDe(nombre).slice(0, 27) + "-" + n; }
+  const orden = (await env.DB.prepare("SELECT COALESCE(MAX(orden), -1) + 1 AS o FROM lore_categorias").first()).o;
+  await env.DB.prepare("INSERT INTO lore_categorias (id, nombre, propias, orden) VALUES (?1,?2,?3,?4)").bind(id, nombre, propias, orden).run();
+  return [201, { id }];
+}
+async function loreCategoriaBorrar(env, u, id) {
+  if (u.rol !== "admin") return [403, { error: "Solo los administradores pueden hacer esto" }];
+  if (await env.DB.prepare("SELECT 1 FROM paginas WHERE seccion = 'lore' AND categoria = ?1").bind(id).first())
+    return [400, { error: "Esta pestaña tiene páginas. Bórralas antes." }];
+  await env.DB.prepare("DELETE FROM lore_categorias WHERE id = ?1").bind(id).run();
   return [200, { ok: true }];
 }
 
@@ -391,6 +440,8 @@ export default {
         const tipo = new URL(req.url).searchParams.get("tipo") || "Compra";
         if (tipo === "Encargo") return new Response(await reciboPng(mis.datosReciboEncargo({ id: 7, titulo: "Necesito 2 stacks de cuarzo", monedas: 120, monedas_min: 80, pagado: 140, extra: 20,
           objetos: JSON.stringify(["8× Esmeralda"]), de_admin: 0, autor: "Steve", usuario: "Alex", cerrado: Date.now() })), { headers: { "Content-Type": "image/png" } });
+        if (tipo === "Transferencia") return new Response(await reciboPng(tra.datosRecibo({ id: 1, de: "Steve", a: "Alex", fecha: Date.now(), motivo: "Compro 3 panes", monedas: 5 })),
+          { headers: { "Content-Type": "image/png" } });
         if (tipo === "Subasta") return new Response(await reciboPng({ numero: 3, tipo, comprador: "Steve", vendedor: "Alex", fecha: Date.now(), objetos: [
           { nombre: "Lote de libros", cantidad: 1, precio: 70, encantamientos: ["2× Libro encantado (Reparación)", "1× Libro encantado (Afilado V)"] }] }),
           { headers: { "Content-Type": "image/png" } });
@@ -423,7 +474,19 @@ export default {
       if (m && req.method === "GET") {
         if (!m[2]) return json(await wikiListar(env, m[1]), 200, cab);
         const p = await wikiLeer(env, m[1], m[2]);
-        return p ? json(p, 200, cab) : json({ error: "No existe esa página" }, 404, cab);
+        if (!p) return json({ error: "No existe esa página" }, 404, cab);
+        const quien = req.headers.get("Authorization") || local ? await usuarioDe(req, env) : null;
+        if (!quien || quien.fuera || quien.rol !== "admin") p.contenido = partirOcultos(p.contenido).visible;
+        return json(p, 200, cab);
+      }
+      if (ruta === "/api/lore/categorias" && req.method === "GET") return json(await categoriasLore(env), 200, cab);
+      const lc = ruta.match(/^\/api\/lore\/categorias(?:\/([a-z0-9-]+))?$/);
+      if (lc && (req.method === "POST" || req.method === "DELETE")) {
+        const [u, error] = await miembroDe(req, env, cab);
+        if (error) return error;
+        const [est, cuerpo] = req.method === "POST" ? await loreCategoriaGuardar(env, u, await req.json().catch(() => ({})))
+          : await loreCategoriaBorrar(env, u, lc[1] || "");
+        return json(cuerpo, est, cab);
       }
       if (ruta === "/api/wiki" && req.method === "POST") {
         const [u, error] = await miembroDe(req, env, cab);
@@ -500,7 +563,7 @@ export default {
         return json(await merc.listar(env, u && !u.fuera ? u : null), 200, cab);
       }
       const mc = ruta.match(/^\/api\/mercadillo(?:\/(\d+)(?:\/(comprar|pujar|lotengo|aceptar))?)?$/);
-      const otras = ["/api/movimientos", "/api/monedas", "/api/usuarios"].includes(ruta) || /^\/api\/recibo\/\d+\.png$/.test(ruta);
+      const otras = ["/api/movimientos", "/api/monedas", "/api/usuarios", "/api/jugadores", "/api/transferir"].includes(ruta) || /^\/api\/recibo\/\d+\.png$/.test(ruta);
       if (mc || otras) {
         const [u, error] = await miembroDe(req, env, cab);
         if (error) return error;
@@ -516,6 +579,11 @@ export default {
         else if (ruta === "/api/movimientos" && req.method === "GET") res = await merc.movimientos(env, u, new URL(req.url));
         else if (ruta === "/api/monedas" && req.method === "POST") res = await merc.darMonedas(env, u, await cuerpo());
         else if (ruta === "/api/usuarios" && req.method === "GET") res = await merc.usuarios(env, u);
+        else if (ruta === "/api/jugadores" && req.method === "GET") res = await tra.jugadores(env, u);
+        else if (ruta === "/api/transferir" && req.method === "POST") {
+          res = await tra.transferir(env, u, await cuerpo());
+          if (res[1].transferencia) ctx.waitUntil(tra.enviarRecibo(env, res[1].transferencia));
+        }
         else if (ruta.startsWith("/api/recibo/") && req.method === "GET") {
           const png = await merc.imagenRecibo(env, u, ruta.match(/\d+/)[0]);
           if (png === null) return json({ error: "No existe ese recibo" }, 404, cab);
@@ -535,7 +603,7 @@ export default {
   // Cron Trigger (cada minuto): cierra las subastas que han terminado.
   async scheduled(evento, env, ctx) {
     // Cierra subastas y manda los recibos pendientes (los de subastas y los que fallaron).
-    ctx.waitUntil(merc.cerrarSubastas(env).then(() => merc.enviarPendientes(env)).then(() => mis.enviarPendientes(env)));
+    ctx.waitUntil(merc.cerrarSubastas(env).then(() => merc.enviarPendientes(env)).then(() => mis.enviarPendientes(env)).then(() => tra.enviarPendientes(env)));
     ctx.waitUntil(revisarClear(env)); // «/clear» de los admins en el privado con el bot
   },
 };
