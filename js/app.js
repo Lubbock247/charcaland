@@ -493,3 +493,30 @@ const render = {
 };
 const cual = document.body.dataset.pagina;
 if (render[cual]) render[cual]();
+
+// Avisos propios en los campos: en vez de la burbuja del navegador, un texto rojo debajo del campo.
+(function () {
+  const texto = c => {
+    const v = c.validity;
+    if (v.valueMissing) return c.type === "checkbox" ? "Marca esta casilla" : c.tagName === "SELECT" ? "Elige una opción" : "Rellena este campo";
+    if (v.rangeUnderflow) return `Tiene que ser como mínimo ${c.min}`;
+    if (v.rangeOverflow) return `Tiene que ser como máximo ${c.max}`;
+    if (v.badInput || v.stepMismatch) return "Pon un número válido";
+    if (v.typeMismatch) return c.type === "email" ? "Pon un correo válido" : c.type === "url" ? "Pon un enlace válido" : "Valor no válido";
+    if (v.tooShort) return `Escribe al menos ${c.minLength} caracteres`;
+    if (v.tooLong) return `Escribe como mucho ${c.maxLength} caracteres`;
+    return c.validationMessage || "Revisa este campo";
+  };
+  const quitar = c => { c.classList.remove("campo-mal"); const a = c._aviso; if (a) { a.remove(); c._aviso = null; } };
+  let primero = null;
+  document.addEventListener("invalid", e => {
+    const c = e.target; e.preventDefault();
+    quitar(c); c.classList.add("campo-mal");
+    const a = document.createElement("div"); a.className = "aviso-campo"; a.textContent = texto(c);
+    c.insertAdjacentElement("afterend", a); c._aviso = a;
+    if (!primero) { primero = c; c.focus({ preventScroll: true }); c.scrollIntoView({ block: "center", behavior: "smooth" }); setTimeout(() => primero = null, 0); }
+  }, true);
+  const limpiar = e => { const c = e.target; if (c && c._aviso && c.checkValidity && c.validity.valid) quitar(c); };
+  document.addEventListener("input", limpiar, true);
+  document.addEventListener("change", limpiar, true);
+})();

@@ -703,3 +703,16 @@ button.sec:disabled { color: var(--suave); cursor: default; border-color: var(--
   .cajon-yo .avatar { width: 32px; height: 32px; flex-shrink: 0; }
   .cajon-yo .saldo { margin-left: auto; }
 }
+
+/* ---- Barras de scroll con los colores de la web ---- */
+* { scrollbar-width: thin; scrollbar-color: var(--borde) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--borde); border-radius: 8px; border: 2px solid var(--fondo); }
+::-webkit-scrollbar-thumb:hover { background: var(--acento); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* ---- Aviso propio de campo vacío o incorrecto (sustituye al del navegador) ---- */
+.campo-mal { border-color: #e5534b !important; box-shadow: 0 0 0 2px rgba(229,83,75,.18); }
+.aviso-campo { display: flex; align-items: center; gap: 6px; margin: 4px 0 8px; color: #ff8a83; font-size: .85rem; font-weight: 600; }
+.aviso-campo::before { content: "!"; display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #e5534b; color: #fff; font-size: .7rem; font-weight: 800; flex-shrink: 0; }
