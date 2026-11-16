@@ -109,3 +109,17 @@ Apunta aquí lo que veas raro:
 - [ ] Rolfin entra con su enlace la primera vez y luego con su contraseña.
 - [ ] A Rolfin le llega el recibo por correo (mirar spam).
 - [ ] Rolfin pulsa «Conectar con Discord» y su cuenta pasa a la de Discord (sigue siendo admin, el enlace deja de servir).
+
+## Misiones y encargos (16/11/2026)
+
+**Ya comprobado (solo en local, con datos inventados):** las reglas de la API (81 comprobaciones: permisos, máximo 6 personales, 3 globales a la vez y 3 al día, 10 encargos al día, 3 encargos aceptados a la vez, monedas apartadas y devueltas, dos precios, dinero extra, no pagar dos veces); crear, aceptar, completar, aprobar y pagar desde la página, el perfil y Administración; la imagen del recibo morado. En la web real, solo que la página carga sin sesión.
+
+**Pendiente (con cuentas reales de Discord):**
+- [ ] Un admin pone una misión personal a un jugador; el jugador la ve, pulsa «Completado» y el admin la aprueba: le llegan las monedas.
+- [ ] Un admin crea una misión global; un jugador la acepta y otro ya no puede. Al 4.º intento del día sale el aviso del límite.
+- [ ] Un jugador crea un encargo con dos precios: se le aparta el máximo y el encargo aparece en su perfil, no en Misiones.
+- [ ] Otro jugador lo acepta y pulsa «Completado»; al creador le sale en «Por verificar» del perfil.
+- [ ] El creador paga como «Completado»: se le devuelve la diferencia. En otro, paga «Satisfactorio» con dinero extra.
+- [ ] El recibo morado llega por privado a los dos y al canal de registro (nunca probado: en local no hay bot).
+- [ ] Borrar un encargo sin aceptar devuelve las monedas.
+- [ ] Cómo se ven las filas nuevas en el móvil.

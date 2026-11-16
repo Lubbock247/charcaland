@@ -3,7 +3,11 @@
 Para seguir en un chat nuevo. Lee antes `CLAUDE.md` y `plan-mercadillo.md`.
 
 ## Estado
-- **Subido el 16/11/2026:** Misiones (página, encargos con dos precios, bloque del perfil), Administración por pestañas y la retirada de «Probar correo». Tablas de `misiones.sql` aplicadas en la base de datos real, API desplegada en Cloudflare y web en `main`.
+- **Todo subido y publicado (16/11/2026), último commit de código `ae41eec`:** no queda nada pendiente de subir.
+  - `0f7849f`: Misiones (página, encargos con dos precios, bloque del perfil), Administración por pestañas y la retirada de «Probar correo». Tablas de `misiones.sql` aplicadas en la base de datos real y API desplegada en Cloudflare.
+  - `ae41eec`: solo parte visual (filas con talón, formularios sin textos de ayuda, Inicio solo con lo tuyo, encargos propios solo en el perfil). La API y la base de datos no cambiaron.
+- Comprobado tras subir: la web publicada sirve `misiones.js?v=3` y `estilo.css?v=39`, la página de Misiones carga sin sesión y `/api/misiones` responde. Nada probado aún con cuentas reales (lista en `por-probar.md`).
+- **Cómo se publica** (solo cuando el usuario lo pida): si cambian tablas, `npx wrangler d1 execute charcaland --remote --file=ARCHIVO.sql` desde `api/`; si cambia la API, `npx wrangler deploy` desde `api/`; y commit con push a `main` para la web. Si solo cambia la parte visual, basta el push.
 - Anterior: commit `5f6e3a6` (mercadillo, recibos, perfil, inicio nuevo, Administración solo con monedas, sin modo pruebas).
 - Si en el navegador se ve lo viejo, es la caché: Ctrl+F5.
 - Sin subir al repositorio: `.claude/`, `ejemplos-recibo/`, `previas-misiones/` (imágenes de los diseños; se puede borrar) y `pruebas-local/` (herramientas de prueba; el usuario no ha dicho si las quiere en el repositorio).
