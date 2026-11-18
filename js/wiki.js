@@ -48,6 +48,21 @@ function formato(texto, resolver) {
       salida.push(`<aside class="caja"><div class="cajat">${inline(bloque.titulo)}</div>` +
         (urlImg ? `<div class="cajai"><img src="${esc(urlImg)}" alt="" loading="lazy"></div>` : "") +
         `<table>` + filas.map(([k, v]) => `<tr><th>${inline(k)}</th><td>${inline(v)}</td></tr>`).join("") + "</table></aside>");
+    } else if (bloque.tipo === "cartas") {
+      // Cartas en pergamino: «Firma | Texto» (o solo el texto)
+      salida.push(bloque.filas.map(p => {
+        const [firma, txt] = p.length >= 2 ? [p[0], p.slice(1).join(" | ")] : ["", p[0]];
+        return `<div class="carta"><p>${inline(txt)}</p>${firma ? `<div class="carta-firma">— ${inline(firma)}</div>` : ""}</div>`;
+      }).join(""));
+    } else if (bloque.tipo === "notas") {
+      // Notas sueltas que se van deteriorando: «Título | Texto». Cuanto más abajo, más gastadas.
+      const n = bloque.filas.length;
+      salida.push(`<div class="notas">` + bloque.filas.map((p, i) => {
+        const [tit, txt] = p.length >= 2 ? [p[0], p.slice(1).join(" | ")] : ["", p[0]];
+        const d = n > 1 ? i / (n - 1) : 0;
+        const giro = ((i % 2 ? 1 : -1) * (0.6 + d * 2)).toFixed(1);
+        return `<div class="nota" style="--d:${d.toFixed(2)};transform:rotate(${giro}deg)">${tit ? `<b>${inline(tit)}</b>` : ""}<p>${inline(txt)}</p></div>`;
+      }).join("") + `</div>`);
     } else {
       salida.push(`<div class="habs">` + bloque.filas.map(partes => {
         const [nivel, nombre, desc] = partes.length >= 3 ? partes
@@ -62,13 +77,13 @@ function formato(texto, resolver) {
     if (bloque) {
       if (l.trim() === ":::") cierraBloque();
       else if (bloque.tipo === "caja" && (m = l.match(/^([^:]+):\s*(.+)$/))) bloque.filas.push([m[1], m[2]]);
-      else if (bloque.tipo === "habilidades" && l.trim()) bloque.filas.push(l.split("|").map(s => s.trim()));
+      else if (bloque.tipo !== "caja" && l.trim()) bloque.filas.push(l.split("|").map(s => s.trim()));
       continue;
     }
     if (/^:::oculto\s*$/.test(l.trim())) { cierraTodo(); oculto++; salida.push(`<div class="oculto-admin"><div class="oculto-rot"><i class="ti ti-eye-off"></i> Oculto para los jugadores</div>`); continue; }
     if (oculto && l.trim() === ":::") { cierraTodo(); oculto--; salida.push(`</div>`); continue; }
     if ((m = l.match(/^:::caja\s*(.*)$/))) { cierraTodo(); bloque = { tipo: "caja", titulo: m[1] || "Datos", filas: [] }; }
-    else if (/^:::habilidades\s*$/.test(l)) { cierraTodo(); bloque = { tipo: "habilidades", filas: [] }; }
+    else if ((m = l.match(/^:::(habilidades|cartas|notas)\s*$/))) { cierraTodo(); bloque = { tipo: m[1], filas: [] }; }
     else if ((m = l.match(/^(#{1,3}) (.+)/))) {
       cierraTodo();
       const n = m[1].length + 2;

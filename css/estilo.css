@@ -729,3 +729,14 @@ button.sec:disabled { color: var(--suave); cursor: default; border-color: var(--
 /* ---- Instalar app ---- */
 .cajon .cajon-instalar { margin: 0 12px 6px; border: 1px solid var(--acento); border-radius: 8px; color: var(--acento) !important; justify-content: center; }
 .icono-app { width: 72px; height: 72px; border-radius: 16px; image-rendering: pixelated; }
+
+/* Wiki: cartas en pergamino y notas que se deterioran (:::cartas, :::notas) */
+.carta { background: #e9dcbf; color: #3b2a17; border: 1px solid #c9b48a; border-radius: 4px; padding: 16px 22px; margin: 14px auto; max-width: 560px; font-family: Georgia, "Times New Roman", serif; font-size: 1rem; line-height: 1.65; clear: both; }
+.carta p { margin: 0; }
+.carta-firma { text-align: right; font-style: italic; color: #6b5434; margin-top: 10px; }
+.carta a.interno { color: #6a3d9a; }
+.notas { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin: 16px 0; clear: both; }
+.nota { --d: 0; background: color-mix(in srgb, #e9dcbf, #b89c6a calc(var(--d) * 100%)); color: color-mix(in srgb, #3b2a17, #6b4a2a calc(var(--d) * 100%)); border-radius: 3px; padding: 12px 14px; font-family: Georgia, "Times New Roman", serif; font-size: .92rem; line-height: 1.55; letter-spacing: calc(var(--d) * .6px); }
+.nota b { display: block; font-size: .78rem; color: #6b5434; margin-bottom: 4px; font-style: normal; }
+.nota p { margin: 0; font-style: italic; }
+.nota:first-child p { font-style: normal; }
