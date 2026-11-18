@@ -740,3 +740,29 @@ button.sec:disabled { color: var(--suave); cursor: default; border-color: var(--
 .nota b { display: block; font-size: .78rem; color: #6b5434; margin-bottom: 4px; font-style: normal; }
 .nota p { margin: 0; font-style: italic; }
 .nota:first-child p { font-style: normal; }
+
+/* Lore como libro de pergamino: páginas de alto fijo, de dos en dos en pantallas anchas */
+.libro { background: #e9dcbf; color: #3b2a17; border: 1px solid #c9b48a; border-radius: 6px; padding: 34px 40px; position: relative; margin-top: 8px; }
+.libro.dos::after { content: ""; position: absolute; top: 18px; bottom: 18px; left: 50%; width: 2px; margin-left: -1px; background: #b89c6a; }
+.libro .marco { overflow: hidden; height: min(72vh, 720px); }
+.libro .hojas { height: 100%; column-fill: auto; position: relative; transition: transform .35s ease; font-family: Georgia, "Times New Roman", serif; font-size: 1.02rem; line-height: 1.7; }
+.libro .hojas p, .libro .hojas li { max-width: none; }
+.libro .hojas h2.wtitulo { font-family: Georgia, serif; font-weight: 400; text-align: center; border: 0; color: #3b2a17; font-size: 1.9rem; margin: 0; padding: 0; letter-spacing: .5px; }
+.libro .adorno { text-align: center; color: #a8844d; margin: 4px 0 14px; }
+.libro .hojas h3, .libro .hojas h4, .libro .hojas h5 { font-family: Georgia, serif; font-weight: 400; color: #6b3a1a; border: 0; padding: 0; break-after: avoid; }
+.libro .hojas h4 { font-size: 1.35rem; margin: 1.2em 0 .4em; text-align: center; }
+.libro .hojas h5 { font-size: 1.1rem; margin: 1em 0 .3em; }
+.libro .hojas > p:first-of-type::first-letter { float: left; font-size: 3.4em; line-height: .85; padding: 6px 8px 0 0; color: #8a2a1a; }
+.libro .hojas em { color: #5a4128; }
+.libro .hojas a.interno { color: #6a3d9a; }
+.libro .hojas ul li::marker, .libro .hojas ol li::marker { color: #a8844d; }
+.libro .carta { background: #f3ead6; max-width: none; break-inside: avoid; }
+.libro .nota, .libro .carta, .libro .hab { break-inside: avoid; }
+.libro .notas { grid-template-columns: 1fr; }
+.libro .oculto-admin { background: rgba(138,92,245,.07); border-color: #7a52d6; }
+.libro .oculto-rot { color: #5b37b0; }
+.libro .roto { color: #8a7a60; }
+.libro-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; color: var(--suave); font-size: .9rem; }
+.libro-nav .btn:disabled { opacity: .35; cursor: default; }
+@media (max-width: 700px) { .libro { padding: 24px 20px; } .libro .marco { height: 70vh; } }
+body[data-pagina="lore"] article.pagina { background: transparent; border: 0; padding: 0 2px; }
