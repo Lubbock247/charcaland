@@ -741,28 +741,29 @@ button.sec:disabled { color: var(--suave); cursor: default; border-color: var(--
 .nota p { margin: 0; font-style: italic; }
 .nota:first-child p { font-style: normal; }
 
-/* Lore como libro de pergamino: páginas de alto fijo, de dos en dos en pantallas anchas */
-.libro { background: #e9dcbf; color: #3b2a17; border: 1px solid #c9b48a; border-radius: 6px; padding: 34px 40px; position: relative; margin-top: 8px; }
-.libro.dos::after { content: ""; position: absolute; top: 18px; bottom: 18px; left: 50%; width: 2px; margin-left: -1px; background: #b89c6a; }
-.libro .marco { overflow: hidden; height: min(72vh, 720px); }
-.libro .hojas { height: 100%; column-fill: auto; position: relative; transition: transform .35s ease; font-family: Georgia, "Times New Roman", serif; font-size: 1.02rem; line-height: 1.7; }
-.libro .hojas p, .libro .hojas li { max-width: none; }
-.libro .hojas h2.wtitulo { font-family: Georgia, serif; font-weight: 400; text-align: center; border: 0; color: #3b2a17; font-size: 1.9rem; margin: 0; padding: 0; letter-spacing: .5px; }
-.libro .adorno { text-align: center; color: #a8844d; margin: 4px 0 14px; }
-.libro .hojas h3, .libro .hojas h4, .libro .hojas h5 { font-family: Georgia, serif; font-weight: 400; color: #6b3a1a; border: 0; padding: 0; break-after: avoid; }
-.libro .hojas h4 { font-size: 1.35rem; margin: 1.2em 0 .4em; text-align: center; }
-.libro .hojas h5 { font-size: 1.1rem; margin: 1em 0 .3em; }
-.libro .hojas > p:first-of-type::first-letter { float: left; font-size: 3.4em; line-height: .85; padding: 6px 8px 0 0; color: #8a2a1a; }
-.libro .hojas em { color: #5a4128; }
-.libro .hojas a.interno { color: #6a3d9a; }
-.libro .hojas ul li::marker, .libro .hojas ol li::marker { color: #a8844d; }
-.libro .carta { background: #f3ead6; max-width: none; break-inside: avoid; }
-.libro .nota, .libro .carta, .libro .hab { break-inside: avoid; }
-.libro .notas { grid-template-columns: 1fr; }
-.libro .oculto-admin { background: rgba(138,92,245,.07); border-color: #7a52d6; }
-.libro .oculto-rot { color: #5b37b0; }
-.libro .roto { color: #8a7a60; }
-.libro-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; color: var(--suave); font-size: .9rem; }
-.libro-nav .btn:disabled { opacity: .35; cursor: default; }
-@media (max-width: 700px) { .libro { padding: 24px 20px; } .libro .marco { height: 70vh; } }
+/* Lore como un gran pergamino que baja hasta el final, con los bordes quemados */
+.pergamino::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 4px;
+  background: radial-gradient(ellipse at center, #efe3c6 0%, #e6d6b2 55%, #d2b57f 82%, #9c6a33 96%, #4a2a10 100%);
+  box-shadow: inset 0 0 18px 6px rgba(74,42,16,.75), inset 0 0 60px 10px rgba(122,74,28,.35);
+  filter: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='q'><feTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='3' seed='7'/><feDisplacementMap in='SourceGraphic' scale='14'/></filter></svg>#q"); }
+.pergamino { position: relative; isolation: isolate; color: #3b2a17; padding: 40px 56px 48px; margin-top: 8px; font-family: Georgia, "Times New Roman", serif; font-size: 1.05rem; line-height: 1.75; }
+.pergamino p, .pergamino li { max-width: 72ch; margin-left: auto; margin-right: auto; }
+.pergamino ul, .pergamino ol { max-width: 72ch; margin-left: auto; margin-right: auto; }
+.pergamino h2.wtitulo { font-family: Georgia, serif; font-weight: 400; text-align: center; border: 0; color: #3b2a17; font-size: 2.1rem; margin: 0; padding: 0; letter-spacing: .5px; }
+.pergamino .adorno { text-align: center; color: #a8844d; margin: 4px 0 22px; }
+.pagina .pergamino h3, .pagina .pergamino h4, .pagina .pergamino h5 { font-family: Georgia, serif; font-weight: 400; color: #6b3a1a; border: 0; padding: 0; }
+.pergamino h4 { font-size: 1.45rem; margin: 1.6em 0 .5em; text-align: center; }
+.pergamino h4::after { content: "— ✦ —"; display: block; font-size: .7rem; color: #a8844d; margin-top: 2px; }
+.pergamino h5 { font-size: 1.15rem; margin: 1.2em auto .3em; max-width: 72ch; }
+.pergamino > p:first-of-type:has(> em:only-child) { text-align: center; color: #6b5434; }
+.pergamino > p:first-of-type:not(:has(> em:only-child))::first-letter, .pergamino > p:first-of-type:has(> em:only-child) + p::first-letter { float: left; font-size: 3.4em; line-height: .85; padding: 6px 8px 0 0; color: #8a2a1a; }
+.pergamino em { color: #5a4128; }
+.pergamino a.interno { color: #6a3d9a; }
+.pergamino li::marker { color: #a8844d; }
+.pergamino .carta { background: #f3ead6; }
+.pergamino .notas { max-width: 72ch; margin-left: auto; margin-right: auto; }
+.pergamino .oculto-admin { background: rgba(138,92,245,.07); border-color: #7a52d6; }
+.pergamino .oculto-rot { color: #5b37b0; }
+.pergamino .roto { color: #8a7a60; }
+@media (max-width: 700px) { .pergamino { padding: 26px 18px 32px; font-size: 1rem; } }
 body[data-pagina="lore"] article.pagina { background: transparent; border: 0; padding: 0 2px; }

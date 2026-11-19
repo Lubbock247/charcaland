@@ -209,64 +209,17 @@ function iniciarWiki(seccion) {
     const toc = sinMenu && indice.length >= 4 ? `<div class="toc"><strong>En esta página</strong>${enlacesIndice(p, indice)}</div>` : "";
     const autor = p.autor && esLore ? `<div class="fecha">por ${esc(p.autor)}</div>` : "";
     if (esLore) return `${botones}<div class="migas">${migas}</div>` +
-      `<div class="libro"><div class="marco"><div class="hojas"><h2 class="wtitulo">${esc(p.titulo)}</h2><div class="adorno">✦</div>${autor}${html}</div></div></div>` +
-      `<div class="libro-nav"><button class="btn g" data-hoja="-1" aria-label="Página anterior">${icono("chevron-left")}</button><span class="libro-num"></span><button class="btn g" data-hoja="1" aria-label="Página siguiente">${icono("chevron-right")}</button></div>`;
+      `<div class="pergamino"><h2 class="wtitulo">${esc(p.titulo)}</h2><div class="adorno">✦</div>${autor}${html}</div>`;
     return `${botones}<div class="migas">${migas}</div><h2 class="wtitulo">${esc(p.titulo)}</h2>${autor}${toc}${html}`;
   }
 
-  // Lore como libro: el texto se reparte en columnas de alto fijo (páginas) y se pasa de dos en dos (una en móvil).
-  let libroIr = null;
-  function montarLibro() {
-    const libro = raiz.querySelector(".libro");
-    libroIr = null;
-    if (!libro) return;
-    const marco = libro.querySelector(".marco"), hojas = libro.querySelector(".hojas");
-    const nav = raiz.querySelector(".libro-nav"), num = nav.querySelector(".libro-num");
-    let actual = 0, ancho = 0, paso = 1, total = 1;
-    const GAP = 64;
-    const medir = () => {
-      const dos = marco.clientWidth >= 700;
-      libro.classList.toggle("dos", dos);
-      paso = dos ? 2 : 1;
-      const pw = dos ? (marco.clientWidth - GAP) / 2 : marco.clientWidth;
-      hojas.style.columnWidth = pw + "px";
-      hojas.style.columnGap = GAP + "px";
-      ancho = pw + GAP;
-      hojas.style.transform = "none";
-      total = Math.max(1, Math.round((hojas.scrollWidth + GAP) / ancho));
-      ir(Math.min(actual, total - 1));
-    };
-    const ir = n => {
-      actual = Math.max(0, Math.min(Math.floor(n / paso) * paso, total - 1));
-      hojas.style.transform = `translateX(${-actual * ancho}px)`;
-      const fin = Math.min(actual + paso, total);
-      num.textContent = paso === 2 && fin > actual + 1 ? `${actual + 1}–${fin} de ${total}` : `${actual + 1} de ${total}`;
-      nav.querySelector('[data-hoja="-1"]').disabled = actual === 0;
-      nav.querySelector('[data-hoja="1"]').disabled = actual + paso >= total;
-    };
-    libroIr = el => ir(Math.floor((el.getBoundingClientRect().left - hojas.getBoundingClientRect().left + 1) / ancho));
-    nav.onclick = e => { const b = e.target.closest("[data-hoja]"); if (b) ir(actual + Number(b.dataset.hoja) * paso); };
-    medir();
-    hojas.querySelectorAll("img").forEach(i => i.complete || i.addEventListener("load", medir));
-    if (document.fonts) document.fonts.ready.then(medir);
-    window.onresize = () => raiz.contains(libro) && medir();
-    document.onkeydown = e => {
-      if (!raiz.contains(libro) || /input|textarea/i.test(e.target.tagName)) return;
-      if (e.key === "ArrowRight") ir(actual + paso);
-      if (e.key === "ArrowLeft") ir(actual - paso);
-    };
-  }
   function activarArticulo(p, alBorrar) {
     const sel = raiz.querySelector(".wmenu a.sel");
     if (sel && indiceActual.length >= 2) sel.insertAdjacentHTML("afterend", `<div class="indice-menu">${enlacesIndice(p, indiceActual)}</div>`);
     indiceActual = [];
     raiz.querySelectorAll("[data-ancla]").forEach(a => a.onclick = e => {
-      e.preventDefault();
-      const el = document.getElementById(a.dataset.ancla);
-      if (el && libroIr) { libroIr(el); raiz.querySelector(".libro").scrollIntoView({ behavior: "smooth", block: "nearest" }); }
-      else el?.scrollIntoView({ behavior: "smooth" });
+      e.preventDefault(); document.getElementById(a.dataset.ancla)?.scrollIntoView({ behavior: "smooth" });
     });
-    montarLibro();
     const b = document.getElementById("borrar");
     if (b) b.onclick = async e => {
       e.preventDefault();
